@@ -1,33 +1,65 @@
 ---
 title: InboxOps
-emoji: 📬
-colorFrom: blue
-colorTo: purple
 sdk: docker
-app_file: app.py
+app_port: 7860
 pinned: false
 ---
 
 # InboxOps
-
-Minimal deterministic OpenEnv hackathon submission for Hugging Face Spaces.
+OpenEnv environment for deterministic email operations triage
 
 ## Overview
+InboxOps is a small, fully deterministic, offline OpenEnv-style environment that simulates internal inbox triage. An agent receives an operations incident prompt (for example password resets, payroll approval issues, legal hold requests), selects a discrete action, and gets graded with a deterministic reward.
 
-InboxOps is an offline environment with three fixed tasks:
+Goal of the agent: choose the correct next operational action for each task to maximize total episode reward.
 
-- `easy`: route password reset backlog to IT
-- `medium`: escalate a payroll approval incident
-- `hard`: send the correct legal hold response
+System the agent interacts with: a minimal FastAPI service exposing `POST /reset` and `POST /step` that wraps the environment logic.
 
-The environment is deterministic, lightweight, and runs entirely offline. It does not use a cloud database, and the environment logic does not depend on external APIs or services.
+## Problem Statement
+The environment presents a short episode consisting of 3 fixed tasks (easy, medium, hard). At each step:
 
-This simulates a real human workflow: internal operations triage. An agent receives a task prompt, chooses an operational action, and is graded programmatically.
+1. The server returns an observation containing the current task prompt and the allowed action choices.
+2. The agent submits an action.
+3. The environment grades the action and returns a scalar reward in the range `0.0..1.0` (deterministic; includes optional partial credit).
+4. After the 3rd graded task, the episode terminates.
 
-## OpenEnv Surface
+Success condition: reach `done=true` with a non-zero score. The included baseline reaches normalized score `1.00`.
 
-Action model:
+Constraints:
+- Deterministic and offline: no external APIs are required for environment operation or grading.
+- Discrete action space: the agent must pick one of a small set of operational actions.
 
+## Key Features
+- Deterministic task set and deterministic grading (no randomness by default).
+- Small, explicit action space suitable for RL-style interaction loops.
+- Partial-credit reward shaping for plausible-but-suboptimal actions.
+- FastAPI server for local demo and Docker-based Hugging Face Spaces deployment.
+- Local verification scripts (`scripts/verify_local.py`, `scripts/pre_submit_check.py`).
+
+## Repository Structure
+```text
+.
+  Dockerfile
+  openenv.yaml
+  requirements.txt
+  inference.py
+  client.py
+  server/
+    app.py
+  my_env/
+    environment.py
+    tasks.py
+    grader.py
+    models.py
+    server/
+      app.py
+  scripts/
+    verify_local.py
+    pre_submit_check.py
+```
+
+## Environment I/O (OpenEnv Surface)
+Action choices:
 - `route_it`
 - `route_finance`
 - `escalate`
@@ -35,151 +67,119 @@ Action model:
 - `resolve`
 
 Observation fields:
+- `task_id`, `difficulty`, `title`, `prompt`
+- `choices` (the action choices)
+- `remaining_tasks`, `done`, `reward`
+- `metadata` (episode id, step count, max reward, etc.)
 
-- `task_id`
-- `difficulty`
-- `title`
-- `prompt`
-- `choices`
-- `remaining_tasks`
-- `done`
-- `reward`
-- `metadata`
+State fields (via `GET /state`):
+- `episode_id`, `step_count`, `current_task_index`
+- `total_tasks`, `completed_tasks`, `total_reward`
+- `active_task_id`, `last_action`, `last_reward`, `last_error`
 
-State fields:
+Rewards:
+- Deterministic per-task grader
+- Normalized to `0.0..1.0` with optional partial credit
 
-- `episode_id`
-- `step_count`
-- `current_task_index`
-- `total_tasks`
-- `completed_tasks`
-- `total_reward`
-- `active_task_id`
-- `last_action`
-- `last_reward`
-- `last_error`
-
-Reward model:
-
-- `value`
-- `max_value`
-- `correct`
-- `difficulty`
-- `reason`
-
-Per-task grader scores are deterministic and normalized to `0.0..1.0`.
-
-## Local Setup
+## Local Setup (Python)
+Prereqs: Python 3.11+.
 
 Install dependencies:
-
 ```bash
 pip install -r requirements.txt
 ```
 
-Environment variables:
-
-```bash
-API_BASE_URL=https://api.openai.com/v1
-MODEL_NAME=gpt-4o-mini
-HF_TOKEN=your-token
-OPENAI_API_KEY=your-token
-```
-
-Use `.env` or Hugging Face Space secrets for these values. The environment itself stays offline; these variables are only for the root `inference.py` client path.
-
 Start the server locally:
-
 ```bash
 python -m server.app
 ```
 
-Run the root inference entrypoint:
-
-```bash
-HF_TOKEN=dummy python inference.py
-```
-
-## Local API Checks
-
-POST `/reset`:
-
-```bash
-curl -X POST http://127.0.0.1:7860/reset
-```
-
-POST `/step`:
-
-```bash
-curl -X POST http://127.0.0.1:7860/step -H "Content-Type: application/json" -d "{\"action\":{\"choice\":\"route_it\"}}"
-```
-
-GET `/state`:
-
-```bash
-curl http://127.0.0.1:7860/state
-```
-
-Optional local verification script:
-
+Verify locally:
 ```bash
 python scripts/verify_local.py
 ```
 
-Run the pre-submission checks:
-
+Run local checks:
 ```bash
 python scripts/pre_submit_check.py
 openenv validate .
 ```
 
-## Docker
+## API Contract
+Base URL (local): `http://127.0.0.1:7860`
 
-Build the image:
+Reset episode:
+```bash
+curl -X POST http://127.0.0.1:7860/reset -H "Content-Type: application/json" -d "{\"seed\":0}"
+```
 
+Take one step:
+```bash
+curl -X POST http://127.0.0.1:7860/step -H "Content-Type: application/json" -d "{\"action\":{\"choice\":\"route_it\"}}"
+```
+
+Inspect internal state:
+```bash
+curl http://127.0.0.1:7860/state
+```
+
+## Baseline
+`inference.py` contains a deterministic heuristic baseline policy:
+- easy: `route_it` -> `0.92`
+- medium: `escalate` -> `0.97`
+- hard: `reply_with_template` -> `1.00`
+
+Expected total baseline reward: `2.89 / 2.89` (normalized episode score `1.00`).
+
+Note: `inference.py` builds an OpenAI client purely as a connectivity/config sanity check; it does not call external APIs during the run. It currently requires `HF_TOKEN` to be set (a dummy value is fine for offline runs).
+
+Environment variables used by `inference.py`:
+```bash
+API_BASE_URL=https://api.openai.com/v1
+MODEL_NAME=gpt-4o-mini
+HF_TOKEN=your-token
+```
+
+## Docker (Local)
+Build:
 ```bash
 docker build -t inboxops .
 ```
 
-Run the container:
-
+Run:
 ```bash
 docker run --rm -p 7860:7860 -e PORT=7860 inboxops
 ```
 
-Then test the API again:
-
+Smoke test:
 ```bash
 curl -X POST http://127.0.0.1:7860/reset
 ```
 
-## Hugging Face Spaces
+## Hugging Face Spaces (Docker)
+This repo is intended for a Docker-based Space. The container runs `uvicorn server.app:app` and listens on `PORT` (default `7860`).
 
-Deploy the repo to a Docker-based Hugging Face Space and confirm the Space is in the `Running` state before submission. If the Space is not `Running`, validation may fail when the validator sends `POST /reset`.
+Deployment checklist:
+- Create a new Space with SDK set to Docker.
+- Push this repo (including `Dockerfile`, `server/`, and `my_env/`).
+- The server itself does not require secrets. Only set secrets if you plan to run `inference.py` in the Space.
+- Confirm the Space is in `Running` state before you try to call the API. If the Space is not `Running`, requests like `POST /reset` will fail.
 
 Verify the deployed Space:
-
 ```bash
 curl -X POST https://YOUR-SPACE-URL.hf.space/reset
 ```
 
-Use the latest submission only.
+## Troubleshooting
+### Hugging Face "File Security Scans" shows: "Permanent failure - resource not found"
+That message is produced by Hugging Face’s automatic file scanning (VirusTotal/ClamAV) when the scanner cannot fetch one of the repo files from the Hub or its cache.
 
-The deployed Space must remain in `Running` state before you submit.
+Things that commonly help:
+- Ensure the Space is built from the latest commit and finished building (not stuck in a broken build state).
+- Ensure required files exist in the repo root (`Dockerfile`, `requirements.txt`, `server/app.py`, `my_env/`).
+- Avoid referencing non-existent files in the README metadata. (This README does not declare an `app_file` because this is a Docker Space.)
 
+If the Space runs and `POST /reset` succeeds, the environment itself is working even if the scan UI is delayed.
 
-## Baseline
-
-Deterministic heuristic baseline in `inference.py`:
-
-- easy: `route_it` -> `0.92`
-- medium: `escalate` -> `0.97`
-- hard: `reply_with_template` -> `1.0`
-
-Expected total baseline reward:
-
-- `2.89 / 2.89`
-
-Expected normalized episode score:
-
-- `1.00`
+## License
+See `LICENSE`.

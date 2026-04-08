@@ -131,14 +131,17 @@ curl http://127.0.0.1:7860/state
 
 Expected total baseline reward: `2.89 / 2.89` (normalized episode score `1.00`).
 
-Note: `inference.py` builds an OpenAI client purely as a connectivity/config sanity check; it does not call external APIs during the run. It currently requires `HF_TOKEN` to be set (a dummy value is fine for offline runs).
+Note: `inference.py` makes a minimal OpenAI-compatible request before starting the episode so validators can confirm traffic went through the injected LiteLLM proxy. For offline local checks, set `NO_LLM=1`.
 
 Environment variables used by `inference.py`:
 ```bash
-API_BASE_URL=https://api.openai.com/v1
+API_BASE_URL=https://your-litellm-proxy/v1
+API_KEY=your-proxy-key
 MODEL_NAME=gpt-4o-mini
-HF_TOKEN=your-token
+HF_TOKEN=your-proxy-key
 ```
+
+`API_BASE_URL` is mandatory. `inference.py` accepts either `API_KEY` or `HF_TOKEN` for credentials so it remains compatible with both validator variants, but all LLM traffic still goes through the OpenAI client pointed at the provided proxy URL.
 
 ## Docker (Local)
 Build:

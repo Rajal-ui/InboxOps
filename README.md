@@ -13,6 +13,26 @@ InboxOps is a compact but production-shaped benchmark environment where an agent
 
 The project is designed to be easy to run, easy to validate, and easy to judge. It combines a realistic operations workflow with a clean API surface, deterministic grading, explainable reward shaping, and a deployment path that works locally and on Hugging Face Spaces.
 
+## Demo Preview
+
+### Task Catalog
+
+![InboxOps task catalog](assets/demo-tasks.png)
+
+Shows the benchmark task set, difficulty spread, expected actions, and operational metadata.
+
+### Counterfactual Analysis
+
+![InboxOps counterfactual analysis](assets/demo-analyze.png)
+
+Shows how the environment scores every valid action for the current task, including exact matches and partial credit.
+
+### Policy Benchmark
+
+![InboxOps policy benchmark](assets/benchmark.png)
+
+Shows score separation between the optimal baseline and weaker heuristic policies.
+
 ## Why This Project Matters
 
 Most internal operations work is not glamorous, but it is where organizations lose time, money, and compliance safety every day. Support queues, finance escalations, and legal retention holds all require fast and correct routing decisions. InboxOps turns that real-world decision process into a small, testable benchmark.

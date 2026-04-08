@@ -23,6 +23,10 @@ TASKS: tuple[TaskMetadata, ...] = (
             "An internal inbox contains employee password reset requests. "
             "Choose the best next action for the queue."
         ),
+        urgency="low",
+        compliance_risk="low",
+        business_impact="medium",
+        tags=["identity", "routing", "service-desk"],
         expected_action="route_it",
         max_reward=0.92,
         partial_credit={
@@ -37,6 +41,10 @@ TASKS: tuple[TaskMetadata, ...] = (
             "Finance reports that payroll approvals are blocked before a payroll deadline. "
             "Choose the best next action."
         ),
+        urgency="high",
+        compliance_risk="medium",
+        business_impact="high",
+        tags=["finance", "deadline", "escalation"],
         expected_action="escalate",
         max_reward=0.97,
         partial_credit={
@@ -52,6 +60,10 @@ TASKS: tuple[TaskMetadata, ...] = (
             "Legal requires a compliant hold response before any mailbox change is made. "
             "Choose the best next action."
         ),
+        urgency="high",
+        compliance_risk="high",
+        business_impact="high",
+        tags=["legal", "retention", "compliance"],
         expected_action="reply_with_template",
         max_reward=1.0,
         partial_credit={

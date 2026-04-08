@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 
 
 Difficulty = Literal["easy", "medium", "hard"]
+Urgency = Literal["low", "medium", "high"]
+RiskLevel = Literal["low", "medium", "high"]
 ActionChoice = Literal[
     "route_it",
     "route_finance",
@@ -20,6 +22,10 @@ class TaskMetadata(BaseModel):
     difficulty: Difficulty = Field(..., description="Task difficulty bucket")
     title: str = Field(..., description="Short task name")
     prompt: str = Field(..., description="Task prompt shown to the agent")
+    urgency: Urgency = Field(..., description="Operational urgency of the task")
+    compliance_risk: RiskLevel = Field(..., description="Risk of violating policy or legal process")
+    business_impact: RiskLevel = Field(..., description="Business impact if the task is mishandled")
+    tags: list[str] = Field(default_factory=list, description="Extra descriptors for analytics and demos")
     expected_action: ActionChoice = Field(..., description="Ground-truth action for grading")
     max_reward: float = Field(..., description="Maximum reward available for this task")
     partial_credit: dict[ActionChoice, float] = Field(
@@ -71,3 +77,17 @@ class InboxOpsState(BaseModel):
     last_action: str | None = Field(default=None, description="Most recent action value")
     last_reward: float = Field(default=0.0, description="Most recent scalar reward")
     last_error: str | None = Field(default=None, description="Most recent safe error message")
+
+
+class CounterfactualActionScore(BaseModel):
+    action: ActionChoice
+    reward: float
+    correct: bool
+    reason: str
+
+
+class CounterfactualAnalysis(BaseModel):
+    task_id: str
+    title: str
+    expected_action: ActionChoice
+    scores: list[CounterfactualActionScore]

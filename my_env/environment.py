@@ -4,6 +4,8 @@ from typing import Any
 
 from my_env.grader import grade_action
 from my_env.models import (
+    CounterfactualActionScore,
+    CounterfactualAnalysis,
     InboxOpsAction,
     InboxOpsObservation,
     InboxOpsState,
@@ -92,6 +94,28 @@ class InboxOpsEnvironment:
     def state(self) -> InboxOpsState:
         return self._state
 
+    def counterfactual_for_current_task(self) -> CounterfactualAnalysis | None:
+        task = self.current_task()
+        if task is None:
+            return None
+        scores = []
+        for action in VALID_ACTIONS:
+            reward, _info = grade_action(task, action)
+            scores.append(
+                CounterfactualActionScore(
+                    action=action,
+                    reward=reward.value,
+                    correct=reward.correct,
+                    reason=reward.reason,
+                )
+            )
+        return CounterfactualAnalysis(
+            task_id=task.task_id,
+            title=task.title,
+            expected_action=task.expected_action,
+            scores=scores,
+        )
+
     def current_task(self) -> TaskMetadata | None:
         if self._done or self._state.current_task_index >= len(self._tasks):
             return None
@@ -138,6 +162,10 @@ class InboxOpsEnvironment:
                 "episode_id": self._state.episode_id,
                 "step_count": self._state.step_count,
                 "max_reward": task.max_reward,
+                "urgency": task.urgency,
+                "compliance_risk": task.compliance_risk,
+                "business_impact": task.business_impact,
+                "tags": task.tags,
             },
         )
 

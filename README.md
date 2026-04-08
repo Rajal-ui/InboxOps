@@ -33,8 +33,10 @@ Constraints:
 - Deterministic task set and deterministic grading (no randomness by default).
 - Small, explicit action space suitable for RL-style interaction loops.
 - Partial-credit reward shaping for plausible-but-suboptimal actions.
+- Counterfactual analysis endpoint that scores every possible action for the active task.
+- Risk-tagged task metadata for urgency, compliance, and business impact.
 - FastAPI server for local demo and Docker-based Hugging Face Spaces deployment.
-- Local verification scripts (`scripts/verify_local.py`, `scripts/pre_submit_check.py`).
+- Local verification scripts (`scripts/verify_local.py`, `scripts/pre_submit_check.py`, `scripts/benchmark_policies.py`).
 
 ## Repository Structure
 ```text
@@ -54,6 +56,7 @@ Constraints:
     server/
       app.py
   scripts/
+    benchmark_policies.py
     verify_local.py
     pre_submit_check.py
 ```
@@ -70,7 +73,7 @@ Observation fields:
 - `task_id`, `difficulty`, `title`, `prompt`
 - `choices` (the action choices)
 - `remaining_tasks`, `done`, `reward`
-- `metadata` (episode id, step count, max reward, etc.)
+- `metadata` (episode id, step count, max reward, urgency, risk tags, etc.)
 
 State fields (via `GET /state`):
 - `episode_id`, `step_count`, `current_task_index`
@@ -102,6 +105,7 @@ python scripts/verify_local.py
 Run local checks:
 ```bash
 python scripts/pre_submit_check.py
+python scripts/benchmark_policies.py
 openenv validate .
 ```
 
@@ -121,6 +125,16 @@ curl -X POST http://127.0.0.1:7860/step -H "Content-Type: application/json" -d "
 Inspect internal state:
 ```bash
 curl http://127.0.0.1:7860/state
+```
+
+List benchmark tasks:
+```bash
+curl http://127.0.0.1:7860/tasks
+```
+
+Analyze all possible actions for the current task:
+```bash
+curl http://127.0.0.1:7860/analyze/current
 ```
 
 ## Baseline

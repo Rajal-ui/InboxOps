@@ -13,7 +13,8 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from my_env.environment import InboxOpsEnvironment
-from my_env.models import InboxOpsAction, InboxOpsObservation, InboxOpsState
+from my_env.models import CounterfactualAnalysis, InboxOpsAction, InboxOpsObservation, InboxOpsState
+from my_env.tasks import TASKS
 
 
 class ResetRequest(BaseModel):
@@ -38,6 +39,10 @@ class StepResponse(BaseModel):
     info: dict[str, Any]
 
 
+class TaskCatalogResponse(BaseModel):
+    tasks: list[dict[str, Any]]
+
+
 _ENV = InboxOpsEnvironment()
 
 app = FastAPI(
@@ -52,7 +57,8 @@ def root() -> dict[str, Any]:
     return {
         "name": "InboxOps",
         "status": "running",
-        "endpoints": ["/reset", "/step", "/state", "/health", "/metadata", "/schema"],
+        "mode": "deterministic benchmark plus analysis tooling",
+        "endpoints": ["/reset", "/step", "/state", "/health", "/metadata", "/schema", "/tasks", "/analyze/current"],
     }
 
 
@@ -68,6 +74,12 @@ def metadata() -> dict[str, Any]:
         "description": "Deterministic offline task triage environment with easy, medium, and hard tasks.",
         "version": "0.1.0",
         "task_count": 3,
+        "features": [
+            "deterministic grading",
+            "counterfactual action analysis",
+            "risk-tagged task metadata",
+            "openenv-compatible fastapi surface",
+        ],
     }
 
 
@@ -78,6 +90,11 @@ def schema() -> dict[str, Any]:
         "observation": InboxOpsObservation.model_json_schema(),
         "state": InboxOpsState.model_json_schema(),
     }
+
+
+@app.get("/tasks", response_model=TaskCatalogResponse)
+def tasks() -> TaskCatalogResponse:
+    return TaskCatalogResponse(tasks=[task.model_dump() for task in TASKS])
 
 
 @app.post("/reset", response_model=ResetResponse)
@@ -101,6 +118,11 @@ def step(request: StepRequest | None = None) -> StepResponse:
 @app.get("/state", response_model=InboxOpsState)
 def state() -> InboxOpsState:
     return _ENV.state()
+
+
+@app.get("/analyze/current", response_model=CounterfactualAnalysis | None)
+def analyze_current() -> CounterfactualAnalysis | None:
+    return _ENV.counterfactual_for_current_task()
 
 
 @app.post("/mcp")

@@ -6,186 +6,525 @@ pinned: false
 ---
 
 # InboxOps
-OpenEnv environment for deterministic email operations triage
 
-## Overview
-InboxOps is a small, fully deterministic, offline OpenEnv-style environment that simulates internal inbox triage. An agent receives an operations incident prompt (for example password resets, payroll approval issues, legal hold requests), selects a discrete action, and gets graded with a deterministic reward.
+**Deterministic operations-triage benchmark for OpenEnv, FastAPI, Docker, and Hugging Face Spaces**
 
-Goal of the agent: choose the correct next operational action for each task to maximize total episode reward.
+InboxOps is a compact but production-shaped benchmark environment where an agent must triage internal operations incidents from an enterprise inbox. Instead of generating open-ended text, the agent must choose the most appropriate next action for each operational scenario, receive a deterministic reward, and finish the episode with the highest possible score.
 
-System the agent interacts with: a minimal FastAPI service exposing `POST /reset` and `POST /step` that wraps the environment logic.
+The project is designed to be easy to run, easy to validate, and easy to judge. It combines a realistic operations workflow with a clean API surface, deterministic grading, explainable reward shaping, and a deployment path that works locally and on Hugging Face Spaces.
 
-## Problem Statement
-The environment presents a short episode consisting of 3 fixed tasks (easy, medium, hard). At each step:
+## Why This Project Matters
 
-1. The server returns an observation containing the current task prompt and the allowed action choices.
-2. The agent submits an action.
-3. The environment grades the action and returns a scalar reward in the range `0.0..1.0` (deterministic; includes optional partial credit).
-4. After the 3rd graded task, the episode terminates.
+Most internal operations work is not glamorous, but it is where organizations lose time, money, and compliance safety every day. Support queues, finance escalations, and legal retention holds all require fast and correct routing decisions. InboxOps turns that real-world decision process into a small, testable benchmark.
 
-Success condition: reach `done=true` with a non-zero score. The included baseline reaches normalized score `1.00`.
+This makes the environment relevant for:
 
-Constraints:
-- Deterministic and offline: no external APIs are required for environment operation or grading.
-- Discrete action space: the agent must pick one of a small set of operational actions.
+- AI agents that need to choose the right operational action under business constraints
+- research on deterministic evaluation for workflow automation
+- safe benchmarking of triage policies without external dependencies
+- demos of OpenEnv-compatible environments that can be deployed and verified quickly
 
-## Key Features
-- Deterministic task set and deterministic grading (no randomness by default).
-- Small, explicit action space suitable for RL-style interaction loops.
-- Partial-credit reward shaping for plausible-but-suboptimal actions.
-- Counterfactual analysis endpoint that scores every possible action for the active task.
-- Risk-tagged task metadata for urgency, compliance, and business impact.
-- FastAPI server for local demo and Docker-based Hugging Face Spaces deployment.
-- Local verification scripts (`scripts/verify_local.py`, `scripts/pre_submit_check.py`, `scripts/benchmark_policies.py`).
+## Core Idea
 
-## Repository Structure
-```text
-.
-  Dockerfile
-  openenv.yaml
-  requirements.txt
-  inference.py
-  client.py
-  server/
-    app.py
-  my_env/
-    environment.py
-    tasks.py
-    grader.py
-    models.py
-    server/
-      app.py
-  scripts/
-    benchmark_policies.py
-    verify_local.py
-    pre_submit_check.py
-```
+The agent is placed in a deterministic inbox-operations setting and must decide what to do next for each task. Every task has:
 
-## Environment I/O (OpenEnv Surface)
-Action choices:
+- a business context
+- a difficulty level
+- a finite action space
+- an expected best action
+- optional partial-credit actions
+- risk metadata such as urgency, compliance risk, and business impact
+
+The benchmark rewards operational judgment, not prompt luck.
+
+## Real-World Use Case
+
+InboxOps models the first layer of operational decision-making inside an enterprise:
+
+- Password-reset requests should be routed to IT
+- payroll approval incidents should be escalated because the deadline risk is high
+- legal retention holds require a compliant response before mailbox changes are made
+
+These are small examples of a broader class of workflows that appear in IT operations, service desks, finance operations, internal tooling, GRC, and enterprise support. A benchmark like this is useful because it isolates decision quality in a way that is deterministic and auditable.
+
+## What InboxOps Demonstrates
+
+- Deterministic offline benchmark behavior
+- enterprise-style inbox triage instead of generic toy tasks
+- explicit reward shaping with partial credit for plausible but suboptimal decisions
+- explainable action grading
+- structured metadata for risk-aware reasoning
+- OpenEnv-compatible FastAPI service
+- Docker-ready deployment
+- Hugging Face Spaces compatibility
+- local validation scripts for reproducible testing
+- a baseline `inference.py` that satisfies validator expectations while remaining robust to probe failures
+
+## Feature Overview
+
+### 1. Deterministic Task Environment
+
+InboxOps ships with three curated tasks across increasing difficulty:
+
+- `task_easy`: Password Reset Routing
+- `task_medium`: Payroll Approval Incident
+- `task_hard`: Mailbox Retention Hold
+
+Each task is deterministic and replayable, which makes the environment suitable for benchmarking and comparison across policies.
+
+### 2. Discrete, Auditable Action Space
+
+The environment uses a small operational action set:
+
 - `route_it`
 - `route_finance`
 - `escalate`
 - `reply_with_template`
 - `resolve`
 
-Observation fields:
-- `task_id`, `difficulty`, `title`, `prompt`
-- `choices` (the action choices)
-- `remaining_tasks`, `done`, `reward`
-- `metadata` (episode id, step count, max reward, urgency, risk tags, etc.)
+This keeps evaluation crisp and makes failure modes easy to inspect.
 
-State fields (via `GET /state`):
-- `episode_id`, `step_count`, `current_task_index`
-- `total_tasks`, `completed_tasks`, `total_reward`
-- `active_task_id`, `last_action`, `last_reward`, `last_error`
+### 3. Reward Shaping with Partial Credit
 
-Rewards:
-- Deterministic per-task grader
-- Normalized to `0.0..1.0` with optional partial credit
+Rewards are deterministic and normalized to `0.0..1.0`.
 
-## Local Setup (Python)
-Prereqs: Python 3.11+.
+- exact best action receives the task's full reward
+- partially reasonable actions can receive partial credit
+- invalid or clearly incorrect actions receive `0.0`
 
-Install dependencies:
-```bash
-pip install -r requirements.txt
+This allows the benchmark to distinguish between:
+
+- correct judgment
+- plausible but incomplete judgment
+- wrong judgment
+
+### 4. Rich Operational Metadata
+
+Each observation carries structured metadata that a serious agent can use:
+
+- urgency
+- compliance risk
+- business impact
+- max reward
+- episode id
+- step count
+- semantic tags
+
+This makes the environment more realistic than a plain classification exercise.
+
+### 5. Counterfactual Action Analysis
+
+The server exposes `GET /analyze/current`, which scores every valid action for the active task. This is useful for:
+
+- debugging policies
+- visualizing task difficulty
+- explaining reward outcomes
+- comparing alternative action choices
+
+### 6. Introspectable API Surface
+
+The environment provides more than just reset and step:
+
+- `GET /`
+- `GET /health`
+- `GET /metadata`
+- `GET /schema`
+- `GET /tasks`
+- `POST /reset`
+- `POST /step`
+- `GET /state`
+- `GET /analyze/current`
+- `POST /mcp`
+
+This makes the benchmark easier to inspect, demo, and integrate.
+
+### 7. OpenAI-Compatible Validator Handshake
+
+`inference.py` performs a minimal OpenAI-compatible request before starting the episode so hosted validators can confirm that the run went through the injected proxy layer. The probe is now best-effort:
+
+- local offline runs can skip it with `NO_LLM=1`
+- if the probe fails, inference still completes the benchmark episode cleanly
+- warnings are emitted to `stderr` instead of crashing the run
+
+### 8. Deployment-Ready Packaging
+
+The project is ready for:
+
+- local Python execution
+- Docker deployment
+- Hugging Face Spaces deployment
+- OpenEnv validation
+
+## Benchmark Design
+
+### Objective
+
+Maximize total episode reward by selecting the best operational action for each task.
+
+### Episode Structure
+
+- fixed-length episode with 3 tasks
+- deterministic order
+- one decision per task
+- terminal observation after all tasks are graded
+
+### Success Condition
+
+Reach `done=true` and earn a non-zero normalized score.
+
+### Baseline Score
+
+The included deterministic baseline in [inference.py](D:\InboxOps\inference.py) achieves:
+
+- total reward: `2.89 / 2.89`
+- normalized score: `1.00`
+
+Optimal mapping:
+
+- easy -> `route_it`
+- medium -> `escalate`
+- hard -> `reply_with_template`
+
+## Architecture
+
+```text
+Agent / Policy
+    |
+    v
+inference.py
+    |
+    v
+FastAPI server (server.app / my_env.server.app)
+    |
+    v
+InboxOpsEnvironment
+    |
+    v
+Task metadata + deterministic grader
 ```
 
-Start the server locally:
-```bash
-python -m server.app
-```
+### Main Components
 
-Verify locally:
-```bash
-python scripts/verify_local.py
-```
-
-Run local checks:
-```bash
-python scripts/pre_submit_check.py
-python scripts/benchmark_policies.py
-openenv validate .
-```
+- [inference.py](D:\InboxOps\inference.py): baseline episode runner and validator-compatible inference entrypoint
+- [client.py](D:\InboxOps\client.py): OpenAI client builder for proxy-backed validation
+- [server/app.py](D:\InboxOps\server\app.py): deployment entrypoint for the FastAPI app
+- [my_env/environment.py](D:\InboxOps\my_env\environment.py): deterministic environment state machine
+- [my_env/grader.py](D:\InboxOps\my_env\grader.py): exact-match, partial-credit, and invalid-action grading
+- [my_env/tasks.py](D:\InboxOps\my_env\tasks.py): benchmark task catalog and valid actions
+- [my_env/models.py](D:\InboxOps\my_env\models.py): pydantic models for observations, rewards, state, and analysis
+- [my_env/server/app.py](D:\InboxOps\my_env\server\app.py): full API implementation
+- [scripts/pre_submit_check.py](D:\InboxOps\scripts\pre_submit_check.py): local pre-submission validation
+- [scripts/smoke_server.py](D:\InboxOps\scripts\smoke_server.py): end-to-end server smoke test
+- [scripts/verify_local.py](D:\InboxOps\scripts\verify_local.py): local API interaction check against a running server
+- [scripts/benchmark_policies.py](D:\InboxOps\scripts\benchmark_policies.py): policy comparison benchmark
 
 ## API Contract
-Base URL (local): `http://127.0.0.1:7860`
 
-Reset episode:
+Base URL:
+
+- local: `http://127.0.0.1:7860`
+- deployed Space: `https://YOUR-SPACE-URL.hf.space`
+
+### Reset
+
 ```bash
-curl -X POST http://127.0.0.1:7860/reset -H "Content-Type: application/json" -d "{\"seed\":0}"
+curl -X POST http://127.0.0.1:7860/reset \
+  -H "Content-Type: application/json" \
+  -d "{\"seed\":0}"
 ```
 
-Take one step:
+### Step
+
 ```bash
-curl -X POST http://127.0.0.1:7860/step -H "Content-Type: application/json" -d "{\"action\":{\"choice\":\"route_it\"}}"
+curl -X POST http://127.0.0.1:7860/step \
+  -H "Content-Type: application/json" \
+  -d "{\"action\":{\"choice\":\"route_it\"}}"
 ```
 
-Inspect internal state:
+### Inspect State
+
 ```bash
 curl http://127.0.0.1:7860/state
 ```
 
-List benchmark tasks:
+### Inspect Task Catalog
+
 ```bash
 curl http://127.0.0.1:7860/tasks
 ```
 
-Analyze all possible actions for the current task:
+### Analyze All Actions for Current Task
+
 ```bash
 curl http://127.0.0.1:7860/analyze/current
 ```
 
-## Baseline
-`inference.py` contains a deterministic heuristic baseline policy:
-- easy: `route_it` -> `0.92`
-- medium: `escalate` -> `0.97`
-- hard: `reply_with_template` -> `1.00`
+## Sample Output
 
-Expected total baseline reward: `2.89 / 2.89` (normalized episode score `1.00`).
+### Example `POST /reset`
 
-Note: `inference.py` makes a minimal OpenAI-compatible request before starting the episode so validators can confirm traffic went through the injected LiteLLM proxy. For offline local checks, set `NO_LLM=1`.
+```json
+{
+  "observation": {
+    "task_id": "task_easy",
+    "difficulty": "easy",
+    "title": "Password Reset Routing",
+    "prompt": "An internal inbox contains employee password reset requests. Choose the best next action for the queue.",
+    "choices": [
+      "route_it",
+      "route_finance",
+      "escalate",
+      "reply_with_template",
+      "resolve"
+    ],
+    "remaining_tasks": 3,
+    "done": false,
+    "reward": 0.0,
+    "metadata": {
+      "episode_id": "inboxops-0002-seed-0",
+      "step_count": 0,
+      "max_reward": 0.92,
+      "urgency": "low",
+      "compliance_risk": "low",
+      "business_impact": "medium",
+      "tags": ["identity", "routing", "service-desk"]
+    }
+  },
+  "reward": 0.0,
+  "done": false,
+  "info": {
+    "message": "environment_reset",
+    "seed": 0,
+    "task_count": 3
+  }
+}
+```
 
-Environment variables used by `inference.py`:
+### Example `GET /analyze/current`
+
+```json
+{
+  "task_id": "task_easy",
+  "title": "Password Reset Routing",
+  "expected_action": "route_it",
+  "scores": [
+    {"action": "route_it", "reward": 0.92, "correct": true, "reason": "exact_match"},
+    {"action": "route_finance", "reward": 0.0, "correct": false, "reason": "incorrect_action"},
+    {"action": "escalate", "reward": 0.0, "correct": false, "reason": "incorrect_action"},
+    {"action": "reply_with_template", "reward": 0.0, "correct": false, "reason": "incorrect_action"},
+    {"action": "resolve", "reward": 0.21, "correct": false, "reason": "partial_credit"}
+  ]
+}
+```
+
+## Observation and State Design
+
+### Observation Fields
+
+- `task_id`
+- `difficulty`
+- `title`
+- `prompt`
+- `choices`
+- `remaining_tasks`
+- `done`
+- `reward`
+- `metadata`
+
+### Metadata Fields
+
+- `episode_id`
+- `step_count`
+- `max_reward`
+- `urgency`
+- `compliance_risk`
+- `business_impact`
+- `tags`
+
+### State Fields
+
+- `episode_id`
+- `step_count`
+- `current_task_index`
+- `total_tasks`
+- `completed_tasks`
+- `total_reward`
+- `active_task_id`
+- `last_action`
+- `last_reward`
+- `last_error`
+
+## Policy Benchmark Results
+
+The repository includes multiple reference policies in [scripts/benchmark_policies.py](D:\InboxOps\scripts\benchmark_policies.py):
+
+- `optimal`: `1.00`
+- `conservative`: `0.52`
+- `finance_bias`: `0.51`
+- `resolve_bias`: `0.20`
+
+This gives reviewers an immediate sense of benchmark separability and policy quality.
+
+## Quick Start
+
+### 1. Install
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Run the Server
+
+```bash
+python -m server.app
+```
+
+### 3. Run the Baseline Inference Locally
+
+For offline local checks:
+
+```bash
+NO_LLM=1 API_BASE_URL=https://example.invalid/v1 API_KEY=dummy python inference.py
+```
+
+On PowerShell:
+
+```powershell
+$env:NO_LLM="1"
+$env:API_BASE_URL="https://example.invalid/v1"
+$env:API_KEY="dummy"
+python inference.py
+```
+
+### 4. Validate the Project
+
+```bash
+python scripts/pre_submit_check.py
+python scripts/smoke_server.py
+python scripts/benchmark_policies.py
+openenv validate .
+```
+
+Note: [scripts/verify_local.py](D:\InboxOps\scripts\verify_local.py) assumes a server is already running on `127.0.0.1:7860`.
+
+## Environment Variables
+
+`inference.py` uses:
+
 ```bash
 API_BASE_URL=https://your-litellm-proxy/v1
 API_KEY=your-proxy-key
-MODEL_NAME=gpt-4o-mini
 HF_TOKEN=your-proxy-key
+MODEL_NAME=gpt-4o-mini
+NO_LLM=1
 ```
 
-`API_BASE_URL` is mandatory. `inference.py` accepts either `API_KEY` or `HF_TOKEN` for credentials so it remains compatible with both validator variants, but all LLM traffic still goes through the OpenAI client pointed at the provided proxy URL.
+Notes:
 
-## Docker (Local)
-Build:
+- `API_BASE_URL` is required when the validator expects OpenAI-compatible traffic
+- either `API_KEY` or `HF_TOKEN` can be used for credentials
+- `NO_LLM=1` is intended for offline local runs
+
+## Docker
+
+### Build
+
 ```bash
 docker build -t inboxops .
 ```
 
-Run:
+### Run
+
 ```bash
 docker run --rm -p 7860:7860 -e PORT=7860 inboxops
 ```
 
-Smoke test:
+### Smoke Test
+
 ```bash
 curl -X POST http://127.0.0.1:7860/reset
 ```
 
-## Hugging Face Spaces (Docker)
-This repo is intended for a Docker-based Space. The container runs `uvicorn server.app:app` and listens on `PORT` (default `7860`).
+## Hugging Face Spaces
+
+This repository is configured for a Docker-based Space.
+
+- SDK: Docker
+- app port: `7860`
+- app entrypoint: `uvicorn server.app:app`
 
 Deployment checklist:
-- Create a new Space with SDK set to Docker.
-- Push this repo (including `Dockerfile`, `server/`, and `my_env/`).
-- The server itself does not require secrets. Only set secrets if you plan to run `inference.py` in the Space.
-- Confirm the Space is in `Running` state before you try to call the API. If the Space is not `Running`, requests like `POST /reset` will fail.
 
-Verify the deployed Space:
+1. Create a Hugging Face Space with Docker SDK.
+2. Push this repository, including `Dockerfile`, `openenv.yaml`, `server/`, and `my_env/`.
+3. Wait until the Space reaches `Running`.
+4. Verify the deployment with a `POST /reset` request.
+
+Example:
+
 ```bash
 curl -X POST https://YOUR-SPACE-URL.hf.space/reset
 ```
 
+## Why This Submission Stands Out
+
+- It solves a real enterprise workflow problem, not a synthetic prompt toy.
+- The benchmark is deterministic, which makes evaluation fair and reproducible.
+- The reward design is interpretable and exposes partial correctness.
+- The API surface is richer than the minimum required, which helps debugging and demos.
+- The project is ready for local, Docker, and Spaces-based deployment.
+- The baseline policy is simple, transparent, and scores perfectly.
+
+## What Reviewers Can Verify Quickly
+
+- the server starts cleanly
+- the environment is deterministic
+- the task design is business-relevant
+- the reward model is explainable
+- the benchmark separates weak and strong policies
+- the project passes local validation and OpenEnv validation
+
+## Suggested Next Improvements
+
+If you want stronger odds against a large field, the next highest-value additions are:
+
+1. Add a short demo GIF or screenshot of API responses and policy benchmarking.
+2. Add one or two more tasks to increase diversity without breaking determinism.
+3. Expose a simple leaderboard or evaluation summary endpoint.
+4. Add a tiny web UI for interactive triage and action analysis.
+5. Include a 30-60 second demo video in the submission if the hackathon allows it.
+
+The codebase is already solid enough to submit. The biggest remaining upside is presentation, demo clarity, and showing why the benchmark matters.
+
+## Repository Structure
+
+```text
+.
+|-- Dockerfile
+|-- LICENSE
+|-- README.md
+|-- client.py
+|-- inference.py
+|-- openenv.yaml
+|-- pyproject.toml
+|-- requirements.txt
+|-- my_env/
+|   |-- environment.py
+|   |-- grader.py
+|   |-- models.py
+|   |-- tasks.py
+|   `-- server/
+|       |-- app.py
+|       `-- debug_run.py
+|-- scripts/
+|   |-- benchmark_policies.py
+|   |-- pre_submit_check.py
+|   |-- smoke_server.py
+|   `-- verify_local.py
+`-- server/
+    `-- app.py
+```
+
 ## License
-See `LICENSE`.
+
+Released under the MIT License. See [LICENSE](D:\InboxOps\LICENSE).

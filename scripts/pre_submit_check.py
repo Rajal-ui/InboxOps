@@ -48,7 +48,9 @@ def check_task_rewards() -> None:
 def check_inference() -> None:
     print("INFERENCE")
     env = os.environ.copy()
-    env.setdefault("HF_TOKEN", "dummy-token")
+    env.setdefault("API_BASE_URL", "https://example.invalid/v1")
+    env.setdefault("API_KEY", "dummy-token")
+    env.setdefault("HF_TOKEN", env["API_KEY"])
     # Keep local checks offline; hosted validators can allow real LLM calls.
     env.setdefault("NO_LLM", "1")
     result = subprocess.run(

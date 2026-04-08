@@ -33,16 +33,16 @@ def _select_action(observation: dict) -> str:
 
 
 def _build_client() -> OpenAI:
-    api_base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+    api_base_url = os.environ["API_BASE_URL"]
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
-    hf_token = os.getenv("HF_TOKEN")
-    if not hf_token:
-        raise RuntimeError("HF_TOKEN is required")
+    api_key = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
+    if not api_key:
+        raise RuntimeError("API_KEY or HF_TOKEN is required")
 
     return build_openai_client(
         api_base_url=api_base_url,
         model_name=model_name,
-        hf_token=hf_token,
+        api_key=api_key,
     )
 
 
@@ -53,17 +53,13 @@ def _maybe_llm_ping(client: OpenAI) -> None:
         return
 
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
-    try:
-        client.chat.completions.create(
-            model=model_name,
-            messages=[{"role": "user", "content": "ping"}],
-            temperature=0,
-            max_tokens=1,
-            stream=False,
-        )
-    except Exception:
-        # Do not print; stdout must remain strictly structured.
-        return
+    client.chat.completions.create(
+        model=model_name,
+        messages=[{"role": "user", "content": "ping"}],
+        temperature=0,
+        max_tokens=1,
+        stream=False,
+    )
 
 
 def main() -> None:

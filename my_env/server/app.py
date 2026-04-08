@@ -21,18 +21,18 @@ class ResetRequest(BaseModel):
 
 
 class ResetResponse(BaseModel):
-    observation: dict[str, Any]
+    observation: InboxOpsObservation
     reward: float
     done: bool
     info: dict[str, Any]
 
 
 class StepRequest(BaseModel):
-    action: Any = None
+    action: InboxOpsAction | str | None = None
 
 
 class StepResponse(BaseModel):
-    observation: dict[str, Any]
+    observation: InboxOpsObservation
     reward: float
     done: bool
     info: dict[str, Any]
@@ -98,9 +98,9 @@ def step(request: StepRequest | None = None) -> StepResponse:
     return StepResponse(observation=observation, reward=reward, done=done, info=info)
 
 
-@app.get("/state")
-def state() -> dict[str, Any]:
-    return _ENV.state().model_dump()
+@app.get("/state", response_model=InboxOpsState)
+def state() -> InboxOpsState:
+    return _ENV.state()
 
 
 @app.post("/mcp")

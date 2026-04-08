@@ -49,6 +49,8 @@ def check_inference() -> None:
     print("INFERENCE")
     env = os.environ.copy()
     env.setdefault("HF_TOKEN", "dummy-token")
+    # Keep local checks offline; hosted validators can allow real LLM calls.
+    env.setdefault("NO_LLM", "1")
     result = subprocess.run(
         [sys.executable, "inference.py"],
         check=True,

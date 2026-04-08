@@ -170,16 +170,5 @@ Verify the deployed Space:
 curl -X POST https://YOUR-SPACE-URL.hf.space/reset
 ```
 
-## Troubleshooting
-### Hugging Face "File Security Scans" shows: "Permanent failure - resource not found"
-That message is produced by Hugging Face’s automatic file scanning (VirusTotal/ClamAV) when the scanner cannot fetch one of the repo files from the Hub or its cache.
-
-Things that commonly help:
-- Ensure the Space is built from the latest commit and finished building (not stuck in a broken build state).
-- Ensure required files exist in the repo root (`Dockerfile`, `requirements.txt`, `server/app.py`, `my_env/`).
-- Avoid referencing non-existent files in the README metadata. (This README does not declare an `app_file` because this is a Docker Space.)
-
-If the Space runs and `POST /reset` succeeds, the environment itself is working even if the scan UI is delayed.
-
 ## License
 See `LICENSE`.

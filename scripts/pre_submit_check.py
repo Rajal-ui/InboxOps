@@ -63,10 +63,30 @@ def check_inference() -> None:
     print(result.stdout.strip())
 
 
+def check_inference_handles_llm_probe_failure() -> None:
+    print("INFERENCE_LLM_FAILURE")
+    env = os.environ.copy()
+    env["API_BASE_URL"] = "https://example.invalid/v1"
+    env["API_KEY"] = "dummy-token"
+    env["HF_TOKEN"] = env["API_KEY"]
+    env.pop("NO_LLM", None)
+    result = subprocess.run(
+        [sys.executable, "inference.py"],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    print(result.stdout.strip())
+    if "[END]" not in result.stdout:
+        raise RuntimeError("inference.py did not finish cleanly after LLM probe failure")
+
+
 def main() -> None:
     check_env_file()
     check_task_rewards()
     check_inference()
+    check_inference_handles_llm_probe_failure()
 
 
 if __name__ == "__main__":

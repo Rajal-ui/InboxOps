@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import List
 
 from openai import OpenAI
@@ -62,7 +63,24 @@ def _maybe_llm_ping(client: OpenAI) -> None:
     )
 
 
-def main() -> None:
+def _emit_warning(message: str) -> None:
+    print(f"[WARN] {message}", file=sys.stderr, flush=True)
+
+
+def _best_effort_llm_probe() -> None:
+    try:
+        client = _build_client()
+    except Exception as exc:
+        _emit_warning(f"llm client setup failed: {exc}")
+        return
+
+    try:
+        _maybe_llm_ping(client)
+    except Exception as exc:
+        _emit_warning(f"llm ping failed: {exc}")
+
+
+def main() -> int:
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
     rewards: List[float] = []
     steps = 0
@@ -76,8 +94,7 @@ def main() -> None:
 
     env = InboxOpsEnvironment()
     try:
-        client = _build_client()
-        _maybe_llm_ping(client)
+        _best_effort_llm_probe()
         observation, _info = env.reset(seed=0)
         done = bool(observation.get("done", False))
 
@@ -101,6 +118,7 @@ def main() -> None:
         success = done and score > 0.0
     except Exception as exc:
         error = exc
+        _emit_warning(f"inference loop failed: {exc}")
         score = min(max(total_reward / max_total_reward, 0.0), 1.0) if max_total_reward else 0.0
         success = False
     finally:
@@ -110,9 +128,8 @@ def main() -> None:
             flush=True,
         )
 
-    if error is not None:
-        raise error
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

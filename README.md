@@ -1,3 +1,13 @@
+---
+title: InboxOps
+emoji: 📬
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_file: app.py
+pinned: false
+---
+
 # InboxOps
 
 Minimal deterministic OpenEnv hackathon submission for Hugging Face Spaces.

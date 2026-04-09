@@ -82,3 +82,17 @@ def grade_task(*args: Any, **kwargs: Any) -> float:
     reward, _info = grade_action(task, action)
     return reward.value
 
+
+def grade_task_easy(*args: Any, **kwargs: Any) -> float:
+    kwargs["task_id"] = "task_easy"
+    return grade_task(*args, **kwargs)
+
+
+def grade_task_medium(*args: Any, **kwargs: Any) -> float:
+    kwargs["task_id"] = "task_medium"
+    return grade_task(*args, **kwargs)
+
+
+def grade_task_hard(*args: Any, **kwargs: Any) -> float:
+    kwargs["task_id"] = "task_hard"
+    return grade_task(*args, **kwargs)

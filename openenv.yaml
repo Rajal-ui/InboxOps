@@ -4,3 +4,15 @@ type: space
 runtime: fastapi
 app: server.app:app
 port: 7860
+description: Deterministic inbox operations benchmark with three graded tasks.
+entrypoint: server.app:app
+tasks:
+  - id: task_easy
+    description: Route password reset requests to IT.
+    grader: my_env.task_graders:grade_task
+  - id: task_medium
+    description: Escalate blocked payroll approvals before the deadline.
+    grader: my_env.task_graders:grade_task
+  - id: task_hard
+    description: Respond compliantly to a mailbox retention hold request.
+    grader: my_env.task_graders:grade_task

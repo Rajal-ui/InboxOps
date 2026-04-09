@@ -20,21 +20,35 @@ class InboxOpsEnvironment:
 
     def __init__(self) -> None:
         self._tasks: tuple[TaskMetadata, ...] = TASKS
+        self._episode_tasks: tuple[TaskMetadata, ...] = TASKS
         self._reset_counter = 0
         self._state = self._initial_state(seed=0)
         self._done = False
 
-    def reset(self, seed: int | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+    def reset(
+        self,
+        seed: int | None = None,
+        task_id: str | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         self._reset_counter += 1
         resolved_seed = 0 if seed is None else seed
+        if task_id is None:
+            self._episode_tasks = self._tasks
+        else:
+            selected_task = next((task for task in self._tasks if task.task_id == task_id), None)
+            if selected_task is None:
+                raise ValueError(f"unknown task_id: {task_id}")
+            self._episode_tasks = (selected_task,)
         self._state = self._initial_state(seed=resolved_seed)
         self._done = False
         observation = self._build_observation(reward_value=0.0)
         info = {
             "message": "environment_reset",
             "seed": resolved_seed,
-            "task_count": len(self._tasks),
+            "task_count": len(self._episode_tasks),
         }
+        if task_id is not None:
+            info["task_id"] = task_id
         return observation.model_dump(), info
 
     def step(
@@ -54,7 +68,7 @@ class InboxOpsEnvironment:
         reward, info = grade_action(task, normalized_action)
 
         next_index = self._state.current_task_index + 1
-        done = next_index >= len(self._tasks)
+        done = next_index >= len(self._episode_tasks)
         error_value = info.get("error")
         last_error = error_value if isinstance(error_value, str) else None
 
@@ -62,10 +76,10 @@ class InboxOpsEnvironment:
             episode_id=self._state.episode_id,
             step_count=self._state.step_count + 1,
             current_task_index=next_index,
-            total_tasks=len(self._tasks),
+            total_tasks=len(self._episode_tasks),
             completed_tasks=self._state.completed_tasks + 1,
             total_reward=round(self._state.total_reward + reward.value, 2),
-            active_task_id=None if done else self._tasks[next_index].task_id,
+            active_task_id=None if done else self._episode_tasks[next_index].task_id,
             last_action=normalized_action,
             last_reward=reward.value,
             last_error=last_error,
@@ -117,19 +131,19 @@ class InboxOpsEnvironment:
         )
 
     def current_task(self) -> TaskMetadata | None:
-        if self._done or self._state.current_task_index >= len(self._tasks):
+        if self._done or self._state.current_task_index >= len(self._episode_tasks):
             return None
-        return self._tasks[self._state.current_task_index]
+        return self._episode_tasks[self._state.current_task_index]
 
     def _initial_state(self, seed: int) -> InboxOpsState:
         return InboxOpsState(
             episode_id=f"inboxops-{self._reset_counter + 1:04d}-seed-{seed}",
             step_count=0,
             current_task_index=0,
-            total_tasks=len(self._tasks),
+            total_tasks=len(self._episode_tasks),
             completed_tasks=0,
             total_reward=0.0,
-            active_task_id=self._tasks[0].task_id,
+            active_task_id=self._episode_tasks[0].task_id,
             last_action=None,
             last_reward=0.0,
             last_error=None,
@@ -155,7 +169,7 @@ class InboxOpsEnvironment:
             title=task.title,
             prompt=task.prompt,
             choices=list(VALID_ACTIONS),
-            remaining_tasks=len(self._tasks) - self._state.current_task_index,
+            remaining_tasks=len(self._episode_tasks) - self._state.current_task_index,
             done=False,
             reward=reward_value,
             metadata={

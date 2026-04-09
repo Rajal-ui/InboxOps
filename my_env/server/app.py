@@ -21,6 +21,7 @@ from my_env.tasks import TASKS
 
 class ResetRequest(BaseModel):
     seed: int | None = Field(default=None, ge=0)
+    task_id: str | None = Field(default=None)
 
 
 class ResetResponse(BaseModel):
@@ -145,7 +146,10 @@ def reset(
     session_header: str | None = Header(default=None, alias="X-Session-Id"),
 ) -> ResetResponse:
     session_id, env = _ensure_session(response, session_cookie, session_header)
-    observation, info = env.reset(seed=request.seed if request else None)
+    observation, info = env.reset(
+        seed=request.seed if request else None,
+        task_id=request.task_id if request else None,
+    )
     return ResetResponse(
         observation=observation,
         reward=0.0,

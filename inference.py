@@ -27,6 +27,11 @@ def _format_reward(value: float) -> str:
     return f"{value:.2f}"
 
 
+def _episode_score(total_reward: float) -> float:
+    task_count = len(TASKS)
+    return (total_reward / task_count) if task_count else 0.0
+
+
 def _select_action(observation: dict) -> str:
     task_id = observation.get("task_id", "")
     policy = {
@@ -107,9 +112,7 @@ def main() -> int:
     steps = 0
     correct_steps = 0
     total_reward = 0.0
-    max_total_reward = sum(task.max_reward for task in TASKS)
     success = False
-    error: Exception | None = None
     score = 0.0
 
     print(f"[START] task={TASK_NAME} env={BENCHMARK} model={model_name}", flush=True)
@@ -125,7 +128,12 @@ def main() -> int:
             if client is None:
                 action = _select_action(observation)
             else:
-                action = _select_action_with_llm(client, observation)
+                try:
+                    action = _select_action_with_llm(client, observation)
+                except Exception as exc:
+                    _emit_warning(f"llm action selection failed, falling back to deterministic policy: {exc}")
+                    client = None
+                    action = _select_action(observation)
             observation, reward, done, info = env.step(action)
             steps += 1
             total_reward += reward
@@ -141,13 +149,11 @@ def main() -> int:
                 flush=True,
             )
 
-        normalized_score = total_reward / max_total_reward if max_total_reward else 0.0
-        score = min(max(normalized_score, 0.0), 1.0)
+        score = _episode_score(total_reward)
         success = done and correct_steps > 0
     except Exception as exc:
-        error = exc
         _emit_warning(f"inference loop failed: {exc}")
-        score = min(max(total_reward / max_total_reward, 0.0), 1.0) if max_total_reward else 0.0
+        score = _episode_score(total_reward)
         success = False
     finally:
         reward_csv = ",".join(_format_reward(value) for value in rewards)

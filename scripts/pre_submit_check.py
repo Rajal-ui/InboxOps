@@ -68,6 +68,10 @@ def check_inference() -> None:
         env=env,
     )
     print(result.stdout.strip())
+    if "steps=3" not in result.stdout:
+        raise RuntimeError("inference.py did not grade all three tasks in offline mode")
+    if "score=1.00" in result.stdout or "score=0.00" in result.stdout:
+        raise RuntimeError("inference.py reported a boundary score; scores must stay strictly between 0 and 1")
 
 
 def check_inference_handles_llm_probe_failure() -> None:
@@ -86,6 +90,10 @@ def check_inference_handles_llm_probe_failure() -> None:
     print(result.stdout.strip())
     if "[END]" not in result.stdout:
         raise RuntimeError("inference.py did not finish cleanly after LLM probe failure")
+    if "steps=3" not in result.stdout:
+        raise RuntimeError("inference.py did not grade all three tasks after LLM probe failure")
+    if "score=1.00" in result.stdout or "score=0.00" in result.stdout:
+        raise RuntimeError("inference.py reported a boundary score after LLM probe failure")
 
 
 def main() -> None:

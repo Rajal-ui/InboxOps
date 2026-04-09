@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from openenv.core.env_server.types import Action, Observation, State
 from pydantic import BaseModel, Field
 
 
@@ -34,9 +35,8 @@ class TaskMetadata(BaseModel):
     )
 
 
-class InboxOpsAction(BaseModel):
+class InboxOpsAction(Action):
     choice: str = Field(..., description="Action selected by the agent")
-    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class InboxOpsReward(BaseModel):
@@ -47,16 +47,13 @@ class InboxOpsReward(BaseModel):
     reason: str = Field(..., description="Short deterministic grading explanation")
 
 
-class InboxOpsObservation(BaseModel):
+class InboxOpsObservation(Observation):
     task_id: str = Field(default="", description="Current task identifier")
     difficulty: Difficulty | None = Field(default=None, description="Current task difficulty")
     title: str = Field(default="", description="Current task title")
     prompt: str = Field(default="", description="Task prompt shown to the agent")
     choices: list[ActionChoice] = Field(default_factory=list, description="Available actions")
     remaining_tasks: int = Field(default=0, description="Tasks remaining in the episode")
-    done: bool = Field(default=False, description="Whether the episode has terminated")
-    reward: float | None = Field(default=None, description="Latest reward signal")
-    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class InboxOpsStepResult(BaseModel):
@@ -66,9 +63,7 @@ class InboxOpsStepResult(BaseModel):
     info: dict[str, Any] = Field(default_factory=dict)
 
 
-class InboxOpsState(BaseModel):
-    episode_id: str | None = Field(default=None, description="Episode identifier")
-    step_count: int = Field(default=0, description="Number of steps taken so far")
+class InboxOpsState(State):
     current_task_index: int = Field(default=0, description="Zero-based active task index")
     total_tasks: int = Field(default=0, description="Total number of tasks in the episode")
     completed_tasks: int = Field(default=0, description="Tasks already graded")

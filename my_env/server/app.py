@@ -88,8 +88,8 @@ def _ensure_session(
 
 app = FastAPI(
     title="InboxOps OpenEnv Server",
-    version="0.1.0",
-    description="Minimal deterministic OpenEnv-compatible server for InboxOps.",
+    version="1.0.0",
+    description="Deterministic OpenEnv-compatible inbox triage environment with manifest-declared graded tasks.",
 )
 
 
@@ -195,30 +195,76 @@ def analyze_current(
 def mcp(payload: dict[str, Any] = Body(default_factory=dict)) -> dict[str, Any]:
     request_id = payload.get("id")
     method = payload.get("method")
+    params = payload.get("params", {})
+
+    def success(result: dict[str, Any]) -> dict[str, Any]:
+        return {"jsonrpc": "2.0", "id": request_id, "result": result}
+
+    def error(code: int, message: str) -> dict[str, Any]:
+        return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+
+    if method == "openenv/session/create":
+        session_id = str(uuid4())
+        _get_or_create_env(session_id)
+        return success({"session_id": session_id})
+
+    if method == "openenv/session/close":
+        session_id = params.get("session_id")
+        if not session_id:
+            return error(-32602, "Invalid params - 'session_id' is required")
+        with _SESSION_LOCK:
+            _SESSIONS.pop(str(session_id), None)
+        return success({"session_id": str(session_id), "closed": True})
 
     if method == "tools/list":
-        result = {
-            "tools": [
-                {
-                    "name": "state",
-                    "description": "Return the current InboxOps environment state",
-                    "inputSchema": {"type": "object", "properties": {}},
-                }
-            ]
-        }
-    elif method == "tools/call":
-        params = payload.get("params", {})
-        tool_name = params.get("name")
-        session_id = str(params.get("session_id") or "mcp-default")
-        env = _get_or_create_env(session_id)
-        if tool_name == "state":
-            result = {"content": [{"type": "text", "text": str(env.state().model_dump())}]}
-        else:
-            result = {"content": [{"type": "text", "text": "unknown_tool"}]}
-    else:
-        result = {"capabilities": {"tools": True}}
+        return success(
+            {
+                "tools": [
+                    {
+                        "name": "state",
+                        "description": "Return the current InboxOps environment state",
+                        "inputSchema": {"type": "object", "properties": {"session_id": {"type": "string"}}},
+                    },
+                    {
+                        "name": "tasks",
+                        "description": "Return the catalog of InboxOps tasks and grader-backed metadata",
+                        "inputSchema": {"type": "object", "properties": {}},
+                    },
+                    {
+                        "name": "analyze_current",
+                        "description": "Return counterfactual scores for the active task in a session",
+                        "inputSchema": {"type": "object", "properties": {"session_id": {"type": "string"}}},
+                    },
+                ]
+            }
+        )
 
-    return {"jsonrpc": "2.0", "id": request_id, "result": result}
+    if method == "tools/call":
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+        if not isinstance(arguments, dict):
+            arguments = {}
+        session_id = str(arguments.get("session_id") or params.get("session_id") or "mcp-default")
+        env = _get_or_create_env(session_id)
+
+        if tool_name == "state":
+            state_payload = env.state().model_dump()
+            return success({"content": [{"type": "text", "text": str(state_payload)}], "structuredContent": state_payload})
+        if tool_name == "tasks":
+            task_payload = [task.model_dump() for task in TASKS]
+            return success({"content": [{"type": "text", "text": str(task_payload)}], "structuredContent": {"tasks": task_payload}})
+        if tool_name == "analyze_current":
+            analysis = env.counterfactual_for_current_task()
+            analysis_payload = None if analysis is None else analysis.model_dump()
+            return success(
+                {
+                    "content": [{"type": "text", "text": str(analysis_payload)}],
+                    "structuredContent": {"analysis": analysis_payload},
+                }
+            )
+        return error(-32601, f"Unknown tool: {tool_name}")
+
+    return success({"capabilities": {"tools": True}})
 
 
 def main(host: str = "0.0.0.0", port: int | None = None) -> None:

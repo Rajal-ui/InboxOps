@@ -1,5 +1,6 @@
 spec_version: 1
 name: inboxops
+version: "1.0.0"
 type: space
 runtime: fastapi
 app: server.app:app
@@ -8,11 +9,29 @@ description: Deterministic inbox operations benchmark with three graded tasks.
 entrypoint: server.app:app
 tasks:
   - id: task_easy
+    name: Password Reset Routing
+    difficulty: easy
     description: Route password reset requests to IT.
-    grader: my_env.task_graders:grade_task
+    max_steps: 1
+    grader:
+      module: my_env.task_graders
+      function: grade_task_easy
   - id: task_medium
+    name: Payroll Approval Incident
+    difficulty: medium
     description: Escalate blocked payroll approvals before the deadline.
-    grader: my_env.task_graders:grade_task
+    max_steps: 1
+    grader:
+      module: my_env.task_graders
+      function: grade_task_medium
   - id: task_hard
+    name: Mailbox Retention Hold
+    difficulty: hard
     description: Respond compliantly to a mailbox retention hold request.
-    grader: my_env.task_graders:grade_task
+    max_steps: 1
+    grader:
+      module: my_env.task_graders
+      function: grade_task_hard
+grader:
+  module: my_env.task_graders
+  function: grade_task

@@ -5,6 +5,14 @@ from typing import TypeGuard
 from my_env.models import ActionChoice, TaskMetadata
 
 
+class InboxOpsTask(TaskMetadata):
+    def grade(self, action_value: str) -> float:
+        from my_env.grader import grade_action
+
+        reward, _info = grade_action(self, action_value)
+        return reward.value
+
+
 VALID_ACTIONS: tuple[ActionChoice, ...] = (
     "route_it",
     "route_finance",
@@ -14,8 +22,8 @@ VALID_ACTIONS: tuple[ActionChoice, ...] = (
 )
 
 
-TASKS: tuple[TaskMetadata, ...] = (
-    TaskMetadata(
+TASKS: tuple[InboxOpsTask, ...] = (
+    InboxOpsTask(
         task_id="task_easy",
         difficulty="easy",
         title="Password Reset Routing",
@@ -29,11 +37,12 @@ TASKS: tuple[TaskMetadata, ...] = (
         tags=["identity", "routing", "service-desk"],
         expected_action="route_it",
         max_reward=0.92,
+        grader="my_env.task_graders:grade_task",
         partial_credit={
             "resolve": 0.21,
         },
     ),
-    TaskMetadata(
+    InboxOpsTask(
         task_id="task_medium",
         difficulty="medium",
         title="Payroll Approval Incident",
@@ -47,12 +56,13 @@ TASKS: tuple[TaskMetadata, ...] = (
         tags=["finance", "deadline", "escalation"],
         expected_action="escalate",
         max_reward=0.97,
+        grader="my_env.task_graders:grade_task",
         partial_credit={
             "route_finance": 0.48,
             "resolve": 0.19,
         },
     ),
-    TaskMetadata(
+    InboxOpsTask(
         task_id="task_hard",
         difficulty="hard",
         title="Mailbox Retention Hold",
@@ -66,6 +76,7 @@ TASKS: tuple[TaskMetadata, ...] = (
         tags=["legal", "retention", "compliance"],
         expected_action="reply_with_template",
         max_reward=0.96,
+        grader="my_env.task_graders:grade_task",
         partial_credit={
             "escalate": 0.52,
             "resolve": 0.17,

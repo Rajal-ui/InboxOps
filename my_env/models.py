@@ -29,6 +29,7 @@ class TaskMetadata(BaseModel):
     tags: list[str] = Field(default_factory=list, description="Extra descriptors for analytics and demos")
     expected_action: ActionChoice = Field(..., description="Ground-truth action for grading")
     max_reward: float = Field(..., description="Maximum reward available for this task")
+    grader: str | None = Field(default=None, description="Optional grader entrypoint for validator task discovery")
     partial_credit: dict[ActionChoice, float] = Field(
         default_factory=dict,
         description="Optional deterministic partial-credit actions scored between 0.0 and 1.0",

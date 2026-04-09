@@ -434,7 +434,6 @@ Note: [scripts/verify_local.py](D:\InboxOps\scripts\verify_local.py) assumes a s
 ```bash
 API_BASE_URL=https://your-litellm-proxy/v1
 API_KEY=your-proxy-key
-HF_TOKEN=your-proxy-key
 MODEL_NAME=gpt-4o-mini
 NO_LLM=1
 ```
@@ -442,7 +441,7 @@ NO_LLM=1
 Notes:
 
 - `API_BASE_URL` is required when the validator expects OpenAI-compatible traffic
-- either `API_KEY` or `HF_TOKEN` can be used for credentials
+- `API_KEY` must be the injected validator key; do not fall back to another token
 - `NO_LLM=1` is intended for offline local runs
 
 ## Docker

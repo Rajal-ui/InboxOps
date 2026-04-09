@@ -50,7 +50,6 @@ def check_inference() -> None:
     env = os.environ.copy()
     env.setdefault("API_BASE_URL", "https://example.invalid/v1")
     env.setdefault("API_KEY", "dummy-token")
-    env.setdefault("HF_TOKEN", env["API_KEY"])
     # Keep local checks offline; hosted validators can allow real LLM calls.
     env.setdefault("NO_LLM", "1")
     result = subprocess.run(
@@ -68,7 +67,6 @@ def check_inference_handles_llm_probe_failure() -> None:
     env = os.environ.copy()
     env["API_BASE_URL"] = "https://example.invalid/v1"
     env["API_KEY"] = "dummy-token"
-    env["HF_TOKEN"] = env["API_KEY"]
     env.pop("NO_LLM", None)
     result = subprocess.run(
         [sys.executable, "inference.py"],

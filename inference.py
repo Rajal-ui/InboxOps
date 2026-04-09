@@ -5,14 +5,18 @@ import sys
 from typing import List
 
 from openai import OpenAI
+from dotenv import load_dotenv
 
 from client import build_openai_client
 from my_env.environment import InboxOpsEnvironment
-from my_env.tasks import TASKS
+from my_env.tasks import TASKS, is_valid_action
 
 
 BENCHMARK = "inboxops"
 TASK_NAME = "ops_triage"
+
+
+load_dotenv()
 
 
 def _bool_text(value: bool) -> str:
@@ -33,12 +37,16 @@ def _select_action(observation: dict) -> str:
     return policy.get(task_id, "resolve")
 
 
+def _llm_enabled() -> bool:
+    return os.getenv("NO_LLM", "").strip().lower() not in {"1", "true", "yes"}
+
+
 def _build_client() -> OpenAI:
     api_base_url = os.environ["API_BASE_URL"]
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
-    api_key = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
+    api_key = os.getenv("API_KEY")
     if not api_key:
-        raise RuntimeError("API_KEY or HF_TOKEN is required")
+        raise RuntimeError("API_KEY is required")
 
     return build_openai_client(
         api_base_url=api_base_url,
@@ -47,38 +55,51 @@ def _build_client() -> OpenAI:
     )
 
 
-def _maybe_llm_ping(client: OpenAI) -> None:
-    # Some validators expect at least one real request to be made via the OpenAI client.
-    # Keep it tiny and silent; never emit extra stdout beyond [START]/[STEP]/[END].
-    if os.getenv("NO_LLM", "").strip().lower() in {"1", "true", "yes"}:
-        return
+def _build_decision_prompt(observation: dict) -> str:
+    metadata = observation.get("metadata", {})
+    tags = ", ".join(metadata.get("tags", [])) or "none"
+    choices = ", ".join(observation.get("choices", [])) or "none"
+    return (
+        "Choose the single best next action for this inbox-operations task.\n"
+        f"Task ID: {observation.get('task_id', '')}\n"
+        f"Title: {observation.get('title', '')}\n"
+        f"Difficulty: {observation.get('difficulty', '')}\n"
+        f"Prompt: {observation.get('prompt', '')}\n"
+        f"Urgency: {metadata.get('urgency', 'unknown')}\n"
+        f"Compliance risk: {metadata.get('compliance_risk', 'unknown')}\n"
+        f"Business impact: {metadata.get('business_impact', 'unknown')}\n"
+        f"Tags: {tags}\n"
+        f"Allowed actions: {choices}\n"
+        "Return exactly one action string from the allowed actions and nothing else."
+    )
 
+
+def _select_action_with_llm(client: OpenAI, observation: dict) -> str:
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
-    client.chat.completions.create(
+    completion = client.chat.completions.create(
         model=model_name,
-        messages=[{"role": "user", "content": "ping"}],
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an operations triage agent. "
+                    "Respond with exactly one allowed action string."
+                ),
+            },
+            {"role": "user", "content": _build_decision_prompt(observation)},
+        ],
         temperature=0,
-        max_tokens=1,
+        max_tokens=16,
         stream=False,
     )
+    action = (completion.choices[0].message.content or "").strip().lower()
+    if not is_valid_action(action):
+        raise RuntimeError(f"invalid llm action: {action or 'empty'}")
+    return action
 
 
 def _emit_warning(message: str) -> None:
     print(f"[WARN] {message}", file=sys.stderr, flush=True)
-
-
-def _best_effort_llm_probe() -> None:
-    try:
-        client = _build_client()
-    except Exception as exc:
-        _emit_warning(f"llm client setup failed: {exc}")
-        return
-
-    try:
-        _maybe_llm_ping(client)
-    except Exception as exc:
-        _emit_warning(f"llm ping failed: {exc}")
-
 
 def main() -> int:
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
@@ -93,13 +114,17 @@ def main() -> int:
     print(f"[START] task={TASK_NAME} env={BENCHMARK} model={model_name}", flush=True)
 
     env = InboxOpsEnvironment()
+    client: OpenAI | None = None
     try:
-        _best_effort_llm_probe()
+        client = _build_client() if _llm_enabled() else None
         observation, _info = env.reset(seed=0)
         done = bool(observation.get("done", False))
 
         while not done:
-            action = _select_action(observation)
+            if client is None:
+                action = _select_action(observation)
+            else:
+                action = _select_action_with_llm(client, observation)
             observation, reward, done, info = env.step(action)
             steps += 1
             total_reward += reward

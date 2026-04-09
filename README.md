@@ -106,11 +106,11 @@ This keeps evaluation crisp and makes failure modes easy to inspect.
 
 ### 3. Reward Shaping with Partial Credit
 
-Rewards are deterministic and normalized to `0.0..1.0`.
+Task grading outputs are deterministic and normalized to the open interval `(0.0, 1.0)`.
 
 - exact best action receives the task's full reward
 - partially reasonable actions can receive partial credit
-- invalid or clearly incorrect actions receive `0.0`
+- invalid or clearly incorrect actions receive a minimal floor reward of `0.01`
 
 This allows the benchmark to distinguish between:
 
@@ -196,7 +196,7 @@ Reach `done=true` and earn a non-zero normalized score.
 
 The included deterministic baseline in [inference.py](D:\InboxOps\inference.py) achieves:
 
-- total reward: `2.89 / 2.89`
+- total reward: `2.85 / 2.85`
 - normalized score: `1.00`
 
 Optimal mapping:
@@ -329,9 +329,9 @@ curl http://127.0.0.1:7860/analyze/current
   "expected_action": "route_it",
   "scores": [
     {"action": "route_it", "reward": 0.92, "correct": true, "reason": "exact_match"},
-    {"action": "route_finance", "reward": 0.0, "correct": false, "reason": "incorrect_action"},
-    {"action": "escalate", "reward": 0.0, "correct": false, "reason": "incorrect_action"},
-    {"action": "reply_with_template", "reward": 0.0, "correct": false, "reason": "incorrect_action"},
+    {"action": "route_finance", "reward": 0.01, "correct": false, "reason": "incorrect_action"},
+    {"action": "escalate", "reward": 0.01, "correct": false, "reason": "incorrect_action"},
+    {"action": "reply_with_template", "reward": 0.01, "correct": false, "reason": "incorrect_action"},
     {"action": "resolve", "reward": 0.21, "correct": false, "reason": "partial_credit"}
   ]
 }
@@ -379,7 +379,7 @@ curl http://127.0.0.1:7860/analyze/current
 The repository includes multiple reference policies in [scripts/benchmark_policies.py](D:\InboxOps\scripts\benchmark_policies.py):
 
 - `optimal`: `1.00`
-- `conservative`: `0.52`
+- `conservative`: `0.53`
 - `finance_bias`: `0.51`
 - `resolve_bias`: `0.20`
 

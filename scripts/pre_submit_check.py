@@ -10,7 +10,8 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from my_env.environment import InboxOpsEnvironment
-from my_env.tasks import TASKS
+from my_env.grader import grade_action
+from my_env.tasks import TASKS, VALID_ACTIONS
 
 
 def check_env_file() -> None:
@@ -41,8 +42,15 @@ def check_task_rewards() -> None:
             "info": info,
         }
         print(json.dumps(payload))
-        if not (0.0 <= reward <= 1.0):
-            raise RuntimeError(f"reward out of range for {task.task_id}: {reward}")
+        if not (0.0 < reward < 1.0):
+            raise RuntimeError(f"reward must be strictly between 0 and 1 for {task.task_id}: {reward}")
+    for task in TASKS:
+        for action in VALID_ACTIONS:
+            reward, _info = grade_action(task, action)
+            if not (0.0 < reward.value < 1.0):
+                raise RuntimeError(
+                    f"grader output must be strictly between 0 and 1 for {task.task_id}/{action}: {reward.value}"
+                )
 
 
 def check_inference() -> None:

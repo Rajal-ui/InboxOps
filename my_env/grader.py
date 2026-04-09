@@ -3,13 +3,15 @@ from __future__ import annotations
 from my_env.models import InboxOpsReward, TaskMetadata
 from my_env.tasks import is_valid_action
 
+MIN_REWARD_FLOOR = 0.01
+
 
 def grade_action(task: TaskMetadata, action_value: str) -> tuple[InboxOpsReward, dict[str, object]]:
     normalized = action_value.strip().lower()
 
     if not is_valid_action(normalized):
         reward = InboxOpsReward(
-            value=0.0,
+            value=MIN_REWARD_FLOOR,
             max_value=task.max_reward,
             correct=False,
             difficulty=task.difficulty,
@@ -54,7 +56,7 @@ def grade_action(task: TaskMetadata, action_value: str) -> tuple[InboxOpsReward,
         }
 
     reward = InboxOpsReward(
-        value=0.0,
+        value=MIN_REWARD_FLOOR,
         max_value=task.max_reward,
         correct=False,
         difficulty=task.difficulty,

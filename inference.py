@@ -105,6 +105,7 @@ def main() -> int:
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
     rewards: List[float] = []
     steps = 0
+    correct_steps = 0
     total_reward = 0.0
     max_total_reward = sum(task.max_reward for task in TASKS)
     success = False
@@ -129,6 +130,8 @@ def main() -> int:
             steps += 1
             total_reward += reward
             rewards.append(reward)
+            if info.get("grade") == "correct":
+                correct_steps += 1
 
             last_error = info.get("error")
             error_text = str(last_error) if last_error else "null"
@@ -140,7 +143,7 @@ def main() -> int:
 
         normalized_score = total_reward / max_total_reward if max_total_reward else 0.0
         score = min(max(normalized_score, 0.0), 1.0)
-        success = done and score > 0.0
+        success = done and correct_steps > 0
     except Exception as exc:
         error = exc
         _emit_warning(f"inference loop failed: {exc}")

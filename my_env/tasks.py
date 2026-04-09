@@ -65,7 +65,7 @@ TASKS: tuple[TaskMetadata, ...] = (
         business_impact="high",
         tags=["legal", "retention", "compliance"],
         expected_action="reply_with_template",
-        max_reward=1.0,
+        max_reward=0.96,
         partial_credit={
             "escalate": 0.52,
             "resolve": 0.17,

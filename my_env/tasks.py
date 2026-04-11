@@ -37,7 +37,7 @@ TASKS: tuple[InboxOpsTask, ...] = (
         tags=["identity", "routing", "service-desk"],
         expected_action="route_it",
         max_reward=0.92,
-        grader="my_env.task_graders:grade_task",
+        grader="my_env.task_graders:grade_task_easy",
         partial_credit={
             "resolve": 0.21,
         },
@@ -56,7 +56,7 @@ TASKS: tuple[InboxOpsTask, ...] = (
         tags=["finance", "deadline", "escalation"],
         expected_action="escalate",
         max_reward=0.97,
-        grader="my_env.task_graders:grade_task",
+        grader="my_env.task_graders:grade_task_medium",
         partial_credit={
             "route_finance": 0.48,
             "resolve": 0.19,
@@ -76,7 +76,7 @@ TASKS: tuple[InboxOpsTask, ...] = (
         tags=["legal", "retention", "compliance"],
         expected_action="reply_with_template",
         max_reward=0.96,
-        grader="my_env.task_graders:grade_task",
+        grader="my_env.task_graders:grade_task_hard",
         partial_credit={
             "escalate": 0.52,
             "resolve": 0.17,

@@ -13,25 +13,17 @@ tasks:
     difficulty: easy
     description: Route password reset requests to IT.
     max_steps: 1
-    grader:
-      module: my_env.task_graders
-      function: grade_task_easy
+    grader: my_env.task_graders:grade_task_easy
   - id: task_medium
     name: Payroll Approval Incident
     difficulty: medium
     description: Escalate blocked payroll approvals before the deadline.
     max_steps: 1
-    grader:
-      module: my_env.task_graders
-      function: grade_task_medium
+    grader: my_env.task_graders:grade_task_medium
   - id: task_hard
     name: Mailbox Retention Hold
     difficulty: hard
     description: Respond compliantly to a mailbox retention hold request.
     max_steps: 1
-    grader:
-      module: my_env.task_graders
-      function: grade_task_hard
-grader:
-  module: my_env.task_graders
-  function: grade_task
+    grader: my_env.task_graders:grade_task_hard
+grader: my_env.task_graders:grade_task

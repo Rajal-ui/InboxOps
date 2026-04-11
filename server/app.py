@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-from my_env.server.app import app as app
-from my_env.server.app import main as _main
+from fastapi import FastAPI
+from typing import Optional
+
+app = FastAPI()
 
 
-def main(host: str = "0.0.0.0", port: int | None = None) -> None:
-    _main(host=host, port=port)
+@app.get("/")
+def read_root() -> dict:
+    return {"status": "ok", "service": "InboxOps"}
+
+
+def main(host: str = "0.0.0.0", port: Optional[int] = None) -> None:
+    import uvicorn
+
+    uvicorn.run("server.app:app", host=host, port=port or 8000)
 
 
 if __name__ == "__main__":

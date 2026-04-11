@@ -13,26 +13,6 @@ InboxOps is a compact but production-shaped benchmark environment where an agent
 
 The project is designed to be easy to run, easy to validate, and easy to judge. It combines a realistic operations workflow with a clean API surface, deterministic grading, explainable reward shaping, and a deployment path that works locally and on Hugging Face Spaces.
 
-## Demo Preview
-
-### Task Catalog
-
-![InboxOps task catalog](assets/demo-tasks.png)
-
-Shows the benchmark task set, difficulty spread, expected actions, and operational metadata.
-
-### Counterfactual Analysis
-
-![InboxOps counterfactual analysis](assets/demo-analyze.png)
-
-Shows how the environment scores every valid action for the current task, including exact matches and partial credit.
-
-### Policy Benchmark
-
-![InboxOps policy benchmark](assets/benchmark.png)
-
-Shows score separation between the optimal baseline and weaker heuristic policies.
-
 ## Why This Project Matters
 
 Most internal operations work is not glamorous, but it is where organizations lose time, money, and compliance safety every day. Support queues, finance escalations, and legal retention holds all require fast and correct routing decisions. InboxOps turns that real-world decision process into a small, testable benchmark.
@@ -106,7 +86,7 @@ This keeps evaluation crisp and makes failure modes easy to inspect.
 
 ### 3. Reward Shaping with Partial Credit
 
-Task grading outputs are deterministic and normalized to the open interval `(0.0, 1.0)`.
+Task grading outputs are deterministic and normalized to the open interval `(0, 1)`.
 
 - exact best action receives the task's full reward
 - partially reasonable actions can receive partial credit
@@ -209,17 +189,17 @@ Optimal mapping:
 
 ```text
 Agent / Policy
-    |
-    v
+  |
+  v
 inference.py
-    |
-    v
-FastAPI server (server.app / my_env.server.app)
-    |
-    v
+  |
+  v
+FastAPI server (see `server/`)
+  |
+  v
 InboxOpsEnvironment
-    |
-    v
+  |
+  v
 Task metadata + deterministic grader
 ```
 
@@ -277,64 +257,6 @@ curl http://127.0.0.1:7860/tasks
 
 ```bash
 curl http://127.0.0.1:7860/analyze/current
-```
-
-## Sample Output
-
-### Example `POST /reset`
-
-```json
-{
-  "observation": {
-    "task_id": "task_easy",
-    "difficulty": "easy",
-    "title": "Password Reset Routing",
-    "prompt": "An internal inbox contains employee password reset requests. Choose the best next action for the queue.",
-    "choices": [
-      "route_it",
-      "route_finance",
-      "escalate",
-      "reply_with_template",
-      "resolve"
-    ],
-    "remaining_tasks": 3,
-    "done": false,
-    "reward": 0.0,
-    "metadata": {
-      "episode_id": "inboxops-0002-seed-0",
-      "step_count": 0,
-      "max_reward": 0.92,
-      "urgency": "low",
-      "compliance_risk": "low",
-      "business_impact": "medium",
-      "tags": ["identity", "routing", "service-desk"]
-    }
-  },
-  "reward": 0.0,
-  "done": false,
-  "info": {
-    "message": "environment_reset",
-    "seed": 0,
-    "task_count": 3
-  }
-}
-```
-
-### Example `GET /analyze/current`
-
-```json
-{
-  "task_id": "task_easy",
-  "title": "Password Reset Routing",
-  "expected_action": "route_it",
-  "scores": [
-    {"action": "route_it", "reward": 0.92, "correct": true, "reason": "exact_match"},
-    {"action": "route_finance", "reward": 0.01, "correct": false, "reason": "incorrect_action"},
-    {"action": "escalate", "reward": 0.01, "correct": false, "reason": "incorrect_action"},
-    {"action": "reply_with_template", "reward": 0.01, "correct": false, "reason": "incorrect_action"},
-    {"action": "resolve", "reward": 0.21, "correct": false, "reason": "partial_credit"}
-  ]
-}
 ```
 
 ## Observation and State Design
@@ -483,65 +405,6 @@ Example:
 
 ```bash
 curl -X POST https://YOUR-SPACE-URL.hf.space/reset
-```
-
-## Why This Submission Stands Out
-
-- It solves a real enterprise workflow problem, not a synthetic prompt toy.
-- The benchmark is deterministic, which makes evaluation fair and reproducible.
-- The reward design is interpretable and exposes partial correctness.
-- The API surface is richer than the minimum required, which helps debugging and demos.
-- The project is ready for local, Docker, and Spaces-based deployment.
-- The baseline policy is simple, transparent, and scores perfectly.
-
-## What Reviewers Can Verify Quickly
-
-- the server starts cleanly
-- the environment is deterministic
-- the task design is business-relevant
-- the reward model is explainable
-- the benchmark separates weak and strong policies
-- the project passes local validation and OpenEnv validation
-
-## Suggested Next Improvements
-
-If you want stronger odds against a large field, the next highest-value additions are:
-
-1. Add a short demo GIF or screenshot of API responses and policy benchmarking.
-2. Add one or two more tasks to increase diversity without breaking determinism.
-3. Expose a simple leaderboard or evaluation summary endpoint.
-4. Add a tiny web UI for interactive triage and action analysis.
-5. Include a 30-60 second demo video in the submission if the hackathon allows it.
-
-The codebase is already solid enough to submit. The biggest remaining upside is presentation, demo clarity, and showing why the benchmark matters.
-
-## Repository Structure
-
-```text
-.
-|-- Dockerfile
-|-- LICENSE
-|-- README.md
-|-- client.py
-|-- inference.py
-|-- openenv.yaml
-|-- pyproject.toml
-|-- requirements.txt
-|-- my_env/
-|   |-- environment.py
-|   |-- grader.py
-|   |-- models.py
-|   |-- tasks.py
-|   `-- server/
-|       |-- app.py
-|       `-- debug_run.py
-|-- scripts/
-|   |-- benchmark_policies.py
-|   |-- pre_submit_check.py
-|   |-- smoke_server.py
-|   `-- verify_local.py
-`-- server/
-    `-- app.py
 ```
 
 ## License

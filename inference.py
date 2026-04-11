@@ -8,8 +8,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 from client import build_openai_client
-from my_env.environment import InboxOpsEnvironment
-from my_env.tasks import TASKS, is_valid_action
+from server.environment import InboxOpsEnvironment
+from server.tasks import TASKS, is_valid_action
 
 
 BENCHMARK = "inboxops"

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from my_env.grader import MIN_REWARD_FLOOR, grade_action
-from my_env.tasks import TASKS
+from server.grader import MIN_REWARD_FLOOR, grade_action
+from server.tasks import TASKS
 
 
 _TASK_BY_ID = {task.task_id: task for task in TASKS}

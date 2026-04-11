@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from my_env.models import InboxOpsReward, TaskMetadata
-from my_env.tasks import is_valid_action
+from models import InboxOpsReward, TaskMetadata
+from server.tasks import is_valid_action
 
 MIN_REWARD_FLOOR = 0.01
 

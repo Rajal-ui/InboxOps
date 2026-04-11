@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pprint import pprint
 
-from my_env.models import InboxOpsAction
-from my_env.environment import InboxOpsEnvironment
+from models import InboxOpsAction
+from server.environment import InboxOpsEnvironment
 
 
 def main() -> None:

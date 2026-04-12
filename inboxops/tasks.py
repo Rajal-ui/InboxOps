@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import TypeGuard
 
-from models import ActionChoice, TaskMetadata
+from inboxops.models import ActionChoice, TaskMetadata
 
 
 class InboxOpsTask(TaskMetadata):
     def grade(self, action_value: str) -> float:
-        from server.grader import grade_action
+        from inboxops.grader import grade_action
 
         reward, _info = grade_action(self, action_value)
         return reward.value
@@ -39,7 +39,7 @@ TASKS: tuple[InboxOpsTask, ...] = (
         tags=["identity", "routing", "service-desk"],
         expected_action="route_it",
         max_reward=0.92,
-        grader="server.task_graders:grade_task_easy",
+        grader="inboxops.task_graders:grade_task_easy",
         partial_credit={
             "resolve": 0.21,
         },
@@ -60,7 +60,7 @@ TASKS: tuple[InboxOpsTask, ...] = (
         tags=["finance", "deadline", "escalation"],
         expected_action="escalate",
         max_reward=0.97,
-        grader="server.task_graders:grade_task_medium",
+        grader="inboxops.task_graders:grade_task_medium",
         partial_credit={
             "route_finance": 0.48,
             "resolve": 0.19,
@@ -82,7 +82,7 @@ TASKS: tuple[InboxOpsTask, ...] = (
         tags=["legal", "retention", "compliance"],
         expected_action="reply_with_template",
         max_reward=0.96,
-        grader="server.task_graders:grade_task_hard",
+        grader="inboxops.task_graders:grade_task_hard",
         partial_credit={
             "escalate": 0.52,
             "resolve": 0.17,

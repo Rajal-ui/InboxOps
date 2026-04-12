@@ -3,10 +3,10 @@ name: inboxops
 version: "1.0.0"
 type: space
 runtime: fastapi
-app: server.app:app
+app: inboxops.app:app
 port: 7860
 description: "Deterministic inbox operations benchmark with three graded tasks."
-entrypoint: server.app:app
+entrypoint: inboxops.app:app
 tasks:
   - id: task_easy
     name: "Password Reset Routing"
@@ -21,7 +21,7 @@ tasks:
     tags: ["identity", "routing", "service-desk"]
     expected_action: route_it
     max_reward: 0.92
-    grader: server.task_graders:grade_task_easy
+    grader: inboxops.task_graders:grade_task_easy
   - id: task_medium
     name: "Payroll Approval Incident"
     task_id: task_medium
@@ -35,7 +35,7 @@ tasks:
     tags: ["finance", "deadline", "escalation"]
     expected_action: escalate
     max_reward: 0.97
-    grader: server.task_graders:grade_task_medium
+    grader: inboxops.task_graders:grade_task_medium
   - id: task_hard
     name: "Mailbox Retention Hold"
     task_id: task_hard
@@ -49,5 +49,5 @@ tasks:
     tags: ["legal", "retention", "compliance"]
     expected_action: reply_with_template
     max_reward: 0.96
-    grader: server.task_graders:grade_task_hard
-grader: server.task_graders:grade_task
+    grader: inboxops.task_graders:grade_task_hard
+grader: inboxops.task_graders:grade_task

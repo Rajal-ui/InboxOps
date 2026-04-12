@@ -15,4 +15,4 @@ COPY . .
 
 EXPOSE 7860
 
-CMD ["sh", "-c", "uvicorn server.app:app --host ${HOST:-0.0.0.0} --port ${PORT:-7860}"]
+CMD ["sh", "-c", "uvicorn inboxops.app:app --host ${HOST:-0.0.0.0} --port ${PORT:-7860}"]

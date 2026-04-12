@@ -1,5 +1,5 @@
 [project]
-name = "inboxops-openenv"
+name = "inboxops"
 version = "0.1.0"
 description = "Minimal deterministic OpenEnv environment for InboxOps."
 requires-python = ">=3.11"
@@ -13,11 +13,11 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "server.app:main"
+inboxops = "inboxops.app:main"
 
 [tool.setuptools]
-packages = ["server"]
-py-modules = ["models", "client", "inference"]
+packages = ["inboxops"]
+
 
 [build-system]
 requires = ["setuptools>=68.0"]

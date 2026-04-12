@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from server.grader import MIN_REWARD_FLOOR, grade_action
-from server.tasks import TASKS
+from inboxops.grader import MIN_REWARD_FLOOR, grade_action
+from inboxops.tasks import TASKS
 
 
 _TASK_BY_ID = {task.task_id: task for task in TASKS}

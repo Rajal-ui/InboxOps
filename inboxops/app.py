@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 
-from server.environment import InboxOpsEnvironment
+from inboxops.environment import InboxOpsEnvironment
 
 app = FastAPI()
 
@@ -63,7 +63,7 @@ def state() -> dict:
 
 @app.get("/tasks")
 def tasks() -> dict:
-    from server.tasks import TASKS
+    from inboxops.tasks import TASKS
 
     return {"tasks": [t.model_dump() for t in TASKS]}
 
@@ -79,7 +79,7 @@ def analyze_current() -> dict:
 def main(host: str = "0.0.0.0", port: Optional[int] = None) -> None:
     import uvicorn
 
-    uvicorn.run("server.app:app", host=host, port=port or 7860)
+    uvicorn.run("inboxops.app:app", host=host, port=port or 7860)
 
 
 if __name__ == "__main__":

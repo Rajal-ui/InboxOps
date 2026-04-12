@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from server.grader import grade_action
-from models import (
+from inboxops.grader import grade_action
+from inboxops.models import (
     CounterfactualActionScore,
     CounterfactualAnalysis,
     InboxOpsAction,
@@ -12,7 +12,7 @@ from models import (
     InboxOpsStepResult,
     TaskMetadata,
 )
-from server.tasks import TASKS, VALID_ACTIONS
+from inboxops.tasks import TASKS, VALID_ACTIONS
 
 
 class InboxOpsEnvironment:

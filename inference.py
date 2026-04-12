@@ -115,56 +115,66 @@ def _emit_warning(message: str) -> None:
 
 def main() -> int:
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
-    rewards: List[float] = []
-    steps = 0
-    total_reward = 0.0
-
-    print(f"[START] task={TASK_NAME} env={BENCHMARK} model={model_name}", flush=True)
 
     env = InboxOpsEnvironment()
     client: OpenAI | None = None
     try:
         client = _build_client() if _llm_enabled() else None
-        observation, _info = env.reset(seed=0)
-        done = bool(observation.get("done", False))
+    except Exception as exc:
+        _emit_warning(f"Failed to build client: {exc}")
+        client = None
 
-        while not done:
-            if client is None:
-                action = _select_action(observation)
-            else:
-                try:
-                    action = _select_action_with_llm(client, observation)
-                except Exception as exc:
-                    _emit_warning(f"llm action selection failed, falling back to deterministic policy: {exc}")
-                    client = None
+    for task in TASKS:
+        rewards: List[float] = []
+        steps = 0
+        total_reward = 0.0
+
+        print(f"[START] task={task.task_id} env={BENCHMARK} model={model_name}", flush=True)
+
+        try:
+            observation, _info = env.reset(seed=0, task_id=task.task_id)
+            done = bool(observation.get("done", False))
+
+            while not done:
+                if client is None:
                     action = _select_action(observation)
-            observation, reward, done, info = env.step(action)
-            
-            # Clamp reward immediately
-            clamped_reward = _clamp(reward)
-            
-            steps += 1
-            total_reward += clamped_reward
-            rewards.append(clamped_reward)
+                else:
+                    try:
+                        action = _select_action_with_llm(client, observation)
+                    except Exception as exc:
+                        _emit_warning(f"llm action selection failed, falling back to deterministic policy: {exc}")
+                        client = None
+                        action = _select_action(observation)
+                        
+                observation, reward, done, info = env.step(action)
+                
+                clamped_reward = _clamp(reward)
+                steps += 1
+                total_reward += clamped_reward
+                rewards.append(clamped_reward)
 
-            last_error = info.get("error")
-            error_text = str(last_error) if last_error else "null"
+                last_error = info.get("error")
+                error_text = str(last_error) if last_error else "null"
+                print(
+                    f"[STEP] step={steps} action={action} reward={clamped_reward:.2f} "
+                    f"done={_bool_text(done)} error={error_text}",
+                    flush=True,
+                )
+
+            final_score = sum(rewards) / len(rewards) if rewards else 0.0
+            rewards_str = ",".join(f"{r:.2f}" for r in rewards)
             print(
-                f"[STEP] step={steps} action={action} reward={clamped_reward:.2f} "
-                f"done={_bool_text(done)} error={error_text}",
+                f"[END] success=true steps={steps} score={final_score:.3f} rewards={rewards_str}",
                 flush=True,
             )
-
-        final_score = _episode_score(total_reward)
-    except Exception as exc:
-        _emit_warning(f"inference loop failed: {exc}")
-        final_score = _episode_score(total_reward)
-    finally:
-        # Mandatory [END] format from feedback: task={task} score={final_score:.2f} steps={n}
-        print(
-            f"[END] task={TASK_NAME} score={final_score:.2f} steps={steps}",
-            flush=True,
-        )
+        except Exception as exc:
+            _emit_warning(f"inference loop failed for task {task.task_id}: {exc}")
+            final_score = sum(rewards) / len(rewards) if rewards else 0.0
+            rewards_str = ",".join(f"{r:.2f}" for r in rewards) if rewards else "0.0"
+            print(
+                f"[END] success=false steps={steps} score={final_score:.3f} rewards={rewards_str}",
+                flush=True,
+            )
 
     return 0
 

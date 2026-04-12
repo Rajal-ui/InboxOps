@@ -24,6 +24,7 @@ def _bool_text(value: bool) -> str:
 
 
 def _clamp(value: float) -> float:
+    # Hackathon requirement: 0.0 and 1.0 are invalid.
     return max(0.01, min(0.99, value))
 
 
@@ -139,6 +140,7 @@ def main() -> int:
                     action = _select_action(observation)
             observation, reward, done, info = env.step(action)
             
+            # Clamp reward immediately
             clamped_reward = _clamp(reward)
             
             steps += 1
@@ -158,6 +160,7 @@ def main() -> int:
         _emit_warning(f"inference loop failed: {exc}")
         final_score = _episode_score(total_reward)
     finally:
+        # Mandatory [END] format from feedback: task={task} score={final_score:.2f} steps={n}
         print(
             f"[END] task={TASK_NAME} score={final_score:.2f} steps={steps}",
             flush=True,

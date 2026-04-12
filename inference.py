@@ -49,9 +49,9 @@ def _llm_enabled() -> bool:
 def _build_client() -> OpenAI:
     api_base_url = os.environ["API_BASE_URL"]
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
-    api_key = os.getenv("API_KEY")
+    api_key = os.getenv("HF_TOKEN")
     if not api_key:
-        raise RuntimeError("API_KEY is required")
+        raise RuntimeError("HF_TOKEN is required")
 
     return build_openai_client(
         api_base_url=api_base_url,

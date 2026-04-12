@@ -16,7 +16,7 @@ dependencies = [
 server = "server.app:main"
 
 [tool.setuptools]
-packages = ["my_env", "my_env.server", "server"]
+packages = ["server"]
 
 [build-system]
 requires = ["setuptools>=68.0"]

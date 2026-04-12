@@ -47,7 +47,7 @@ def _llm_enabled() -> bool:
 
 
 def _build_client() -> OpenAI:
-    api_base_url = os.environ["API_BASE_URL"]
+    api_base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
     api_key = os.getenv("HF_TOKEN")
     if not api_key:

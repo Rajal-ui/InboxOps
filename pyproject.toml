@@ -17,6 +17,7 @@ server = "server.app:main"
 
 [tool.setuptools]
 packages = ["server"]
+py-modules = ["models", "client", "inference"]
 
 [build-system]
 requires = ["setuptools>=68.0"]

@@ -41,7 +41,7 @@ def main() -> int:
     env["PORT"] = str(port)
 
     proc = subprocess.Popen(
-        [sys.executable, "-m", "inboxops.app"],
+        [sys.executable, "-m", "server.app"],
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

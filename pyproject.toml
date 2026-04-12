@@ -13,10 +13,11 @@ dependencies = [
 ]
 
 [project.scripts]
-inboxops = "inboxops.app:main"
+server = "server.app:main"
 
 [tool.setuptools]
-packages = ["inboxops"]
+packages = ["server"]
+py-modules = ["models", "client", "inference"]
 
 
 [build-system]

@@ -7,9 +7,9 @@ from typing import List
 from openai import OpenAI
 from dotenv import load_dotenv
 
-from inboxops.client import build_openai_client
-from inboxops.environment import InboxOpsEnvironment
-from inboxops.tasks import TASKS, is_valid_action
+from client import build_openai_client
+from server.environment import InboxOpsEnvironment
+from server.tasks import TASKS, is_valid_action
 
 
 BENCHMARK = "inboxops"

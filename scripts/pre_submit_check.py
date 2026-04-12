@@ -9,9 +9,9 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from inboxops.environment import InboxOpsEnvironment
-from inboxops.grader import grade_action
-from inboxops.tasks import TASKS, VALID_ACTIONS
+from server.environment import InboxOpsEnvironment
+from server.grader import grade_action
+from server.tasks import TASKS, VALID_ACTIONS
 
 
 def check_env_file() -> None:

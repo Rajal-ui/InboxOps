@@ -8,8 +8,8 @@ from typing import Callable
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from inboxops.environment import InboxOpsEnvironment
-from inboxops.tasks import TASKS
+from server.environment import InboxOpsEnvironment
+from server.tasks import TASKS
 
 
 Policy = Callable[[dict], str]

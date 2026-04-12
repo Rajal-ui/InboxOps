@@ -23,13 +23,19 @@ def _bool_text(value: bool) -> str:
     return "true" if value else "false"
 
 
+def _clamp(value: float) -> float:
+    # Hackathon requirement: 0.0 and 1.0 are invalid.
+    return max(0.01, min(0.99, value))
+
+
 def _format_reward(value: float) -> str:
-    return f"{value:.2f}"
+    return f"{_clamp(value):.2f}"
 
 
 def _episode_score(total_reward: float) -> float:
     task_count = len(TASKS)
-    return (total_reward / task_count) if task_count else 0.0
+    raw_score = (total_reward / task_count) if task_count else 0.0
+    return _clamp(raw_score)
 
 
 def _select_action(observation: dict) -> str:
@@ -106,14 +112,12 @@ def _select_action_with_llm(client: OpenAI, observation: dict) -> str:
 def _emit_warning(message: str) -> None:
     print(f"[WARN] {message}", file=sys.stderr, flush=True)
 
+
 def main() -> int:
     model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
     rewards: List[float] = []
     steps = 0
-    correct_steps = 0
     total_reward = 0.0
-    success = False
-    score = 0.0
 
     print(f"[START] task={TASK_NAME} env={BENCHMARK} model={model_name}", flush=True)
 
@@ -135,30 +139,30 @@ def main() -> int:
                     client = None
                     action = _select_action(observation)
             observation, reward, done, info = env.step(action)
+            
+            # Clamp reward immediately
+            clamped_reward = _clamp(reward)
+            
             steps += 1
-            total_reward += reward
-            rewards.append(reward)
-            if info.get("grade") == "correct":
-                correct_steps += 1
+            total_reward += clamped_reward
+            rewards.append(clamped_reward)
 
             last_error = info.get("error")
             error_text = str(last_error) if last_error else "null"
             print(
-                f"[STEP] step={steps} action={action} reward={_format_reward(reward)} "
+                f"[STEP] step={steps} action={action} reward={clamped_reward:.2f} "
                 f"done={_bool_text(done)} error={error_text}",
                 flush=True,
             )
 
-        score = _episode_score(total_reward)
-        success = done and correct_steps > 0
+        final_score = _episode_score(total_reward)
     except Exception as exc:
         _emit_warning(f"inference loop failed: {exc}")
-        score = _episode_score(total_reward)
-        success = False
+        final_score = _episode_score(total_reward)
     finally:
-        reward_csv = ",".join(_format_reward(value) for value in rewards)
+        # Mandatory [END] format from feedback: task={task} score={final_score:.2f} steps={n}
         print(
-            f"[END] success={_bool_text(success)} steps={steps} score={score:.2f} rewards={reward_csv}",
+            f"[END] task={TASK_NAME} score={final_score:.2f} steps={steps}",
             flush=True,
         )
 

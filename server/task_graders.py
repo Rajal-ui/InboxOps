@@ -9,90 +9,105 @@ from server.tasks import TASKS
 _TASK_BY_ID = {task.task_id: task for task in TASKS}
 
 
-def _extract_task_id(*args: Any, **kwargs: Any) -> str | None:
-    for value in args:
-        if isinstance(value, str) and value in _TASK_BY_ID:
-            return value
-        if isinstance(value, dict):
-            task_id = value.get("task_id") or value.get("id")
-            if isinstance(task_id, str) and task_id in _TASK_BY_ID:
-                return task_id
-    task_id = kwargs.get("task_id") or kwargs.get("id")
-    if isinstance(task_id, str) and task_id in _TASK_BY_ID:
-        return task_id
-    task = kwargs.get("task")
-    if isinstance(task, dict):
-        nested_task_id = task.get("task_id") or task.get("id")
-        if isinstance(nested_task_id, str) and nested_task_id in _TASK_BY_ID:
-            return nested_task_id
+def _clamp(value: float) -> float:
+    # Hackathon requirement: 0.0 and 1.0 are invalid.
+    return max(0.01, min(0.99, value))
+
+
+def _extract_task_id(instance: Any, *args, **kwargs) -> str | None:
+    # Try keywords first
+    tid = kwargs.get("task_id") or kwargs.get("id")
+    if tid:
+        return tid
+
+    # Try raw dictionary as first arg
+    if args and isinstance(args[0], dict):
+        return args[0].get("task_id") or args[0].get("id")
+
+    # Try looking for a .task_id or .id attribute on the first arg (State object)
+    if args and hasattr(args[0], "task_id"):
+        return getattr(args[0], "task_id")
+    if args and hasattr(args[0], "active_task_id"):
+        return getattr(args[0], "active_task_id")
+
     return None
 
 
-def _extract_action(*args: Any, **kwargs: Any) -> str | None:
-    direct_action = kwargs.get("action")
-    if isinstance(direct_action, str):
-        return direct_action
-    if isinstance(direct_action, dict):
-        choice = direct_action.get("choice")
-        if isinstance(choice, str):
-            return choice
+class EasyGrader:
+    def grade(self, env: Any, *args, **kwargs) -> float:
+        task = _TASK_BY_ID["task_easy"]
+        # Extract action choice from kwargs or args
+        action_value = kwargs.get("action")
+        if action_value is None and args:
+            # Action is often passed as a second arg if the first is state
+            if len(args) > 1:
+                action_value = args[1]
+            elif isinstance(args[0], (str, dict)):
+                action_value = args[0]
 
-    trajectory = kwargs.get("trajectory")
-    if isinstance(trajectory, list):
-        for item in reversed(trajectory):
-            if not isinstance(item, dict):
-                continue
-            action = item.get("action")
-            if isinstance(action, str):
-                return action
-            if isinstance(action, dict):
-                choice = action.get("choice")
-                if isinstance(choice, str):
-                    return choice
-
-    for value in args:
-        if isinstance(value, dict):
-            action = value.get("action")
-            if isinstance(action, str):
-                return action
-            if isinstance(action, dict):
-                choice = action.get("choice")
-                if isinstance(choice, str):
-                    return choice
-    return None
+        reward, _info = grade_action(task, action_value)
+        return _clamp(reward.value)
 
 
-def grade_task(*args: Any, **kwargs: Any) -> float:
-    """
-    Validator-friendly task grader entrypoint.
+class MediumGrader:
+    def grade(self, env: Any, *args, **kwargs) -> float:
+        task = _TASK_BY_ID["task_medium"]
+        action_value = kwargs.get("action")
+        if action_value is None and args:
+            if len(args) > 1:
+                action_value = args[1]
+            elif isinstance(args[0], (str, dict)):
+                action_value = args[0]
 
-    The hosted validator may call this with varying argument shapes, so this
-    function tolerates flexible inputs and always returns a score in (0, 1).
-    """
-
-    task_id = _extract_task_id(*args, **kwargs)
-    if task_id is None:
-        return MIN_REWARD_FLOOR
-
-    task = _TASK_BY_ID[task_id]
-    action = _extract_action(*args, **kwargs)
-    if action is None:
-        return task.max_reward
-
-    reward, _info = grade_action(task, action)
-    return reward.value
+        reward, _info = grade_action(task, action_value)
+        return _clamp(reward.value)
 
 
-def grade_task_easy(*args: Any, **kwargs: Any) -> float:
-    kwargs["task_id"] = "task_easy"
-    return grade_task(*args, **kwargs)
+class HardGrader:
+    def grade(self, env: Any, *args, **kwargs) -> float:
+        task = _TASK_BY_ID["task_hard"]
+        action_value = kwargs.get("action")
+        if action_value is None and args:
+            if len(args) > 1:
+                action_value = args[1]
+            elif isinstance(args[0], (str, dict)):
+                action_value = args[0]
+
+        reward, _info = grade_action(task, action_value)
+        return _clamp(reward.value)
 
 
-def grade_task_medium(*args: Any, **kwargs: Any) -> float:
-    kwargs["task_id"] = "task_medium"
-    return grade_task(*args, **kwargs)
+class MultiGrader:
+    """Dispatches to the correct grader based on task discovery."""
+
+    def __init__(self):
+        self.easy = EasyGrader()
+        self.medium = MediumGrader()
+        self.hard = HardGrader()
+
+    def grade(self, env: Any, *args, **kwargs) -> float:
+        task_id = _extract_task_id(None, *args, **kwargs)
+        if task_id == "task_easy":
+            return self.easy.grade(env, *args, **kwargs)
+        elif task_id == "task_medium":
+            return self.medium.grade(env, *args, **kwargs)
+        elif task_id == "task_hard":
+            return self.hard.grade(env, *args, **kwargs)
+        return _clamp(MIN_REWARD_FLOOR)
 
 
-def grade_task_hard(*args: Any, **kwargs: Any) -> float:
-    kwargs["task_id"] = "task_hard"
-    return grade_task(*args, **kwargs)
+# Also expose as functions for potential direct calls
+def grade_task_easy(env, *args, **kwargs) -> float:
+    return EasyGrader().grade(env, *args, **kwargs)
+
+
+def grade_task_medium(env, *args, **kwargs) -> float:
+    return MediumGrader().grade(env, *args, **kwargs)
+
+
+def grade_task_hard(env, *args, **kwargs) -> float:
+    return HardGrader().grade(env, *args, **kwargs)
+
+
+def grade_task(env, *args, **kwargs) -> float:
+    return MultiGrader().grade(env, *args, **kwargs)

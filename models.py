@@ -20,8 +20,10 @@ ActionChoice = Literal[
 
 class TaskMetadata(BaseModel):
     task_id: str = Field(..., description="Stable task identifier")
+    id: str = Field(..., description="Alias for task_id for spec compliance")
     difficulty: Difficulty = Field(..., description="Task difficulty bucket")
     title: str = Field(..., description="Short task name")
+    name: str = Field(..., description="Alias for title for spec compliance")
     prompt: str = Field(..., description="Task prompt shown to the agent")
     urgency: Urgency = Field(..., description="Operational urgency of the task")
     compliance_risk: RiskLevel = Field(..., description="Risk of violating policy or legal process")

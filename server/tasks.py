@@ -25,8 +25,10 @@ VALID_ACTIONS: tuple[ActionChoice, ...] = (
 TASKS: tuple[InboxOpsTask, ...] = (
     InboxOpsTask(
         task_id="task_easy",
+        id="task_easy",
         difficulty="easy",
         title="Password Reset Routing",
+        name="Password Reset Routing",
         prompt=(
             "An internal inbox contains employee password reset requests. "
             "Choose the best next action for the queue."
@@ -44,8 +46,10 @@ TASKS: tuple[InboxOpsTask, ...] = (
     ),
     InboxOpsTask(
         task_id="task_medium",
+        id="task_medium",
         difficulty="medium",
         title="Payroll Approval Incident",
+        name="Payroll Approval Incident",
         prompt=(
             "Finance reports that payroll approvals are blocked before a payroll deadline. "
             "Choose the best next action."
@@ -64,8 +68,10 @@ TASKS: tuple[InboxOpsTask, ...] = (
     ),
     InboxOpsTask(
         task_id="task_hard",
+        id="task_hard",
         difficulty="hard",
         title="Mailbox Retention Hold",
+        name="Mailbox Retention Hold",
         prompt=(
             "Legal requires a compliant hold response before any mailbox change is made. "
             "Choose the best next action."

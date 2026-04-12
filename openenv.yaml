@@ -1,70 +1,53 @@
 spec_version: 1
 name: inboxops
-version: 1.0.0
+version: "1.0.0"
 type: space
 runtime: fastapi
 app: server.app:app
 port: 7860
-description: Deterministic inbox operations benchmark with three graded tasks.
+description: "Deterministic inbox operations benchmark with three graded tasks."
 entrypoint: server.app:app
 tasks:
-- task_id: task_easy
-  difficulty: easy
-  title: Password Reset Routing
-  prompt: An internal inbox contains employee password reset requests. Choose the
-    best next action for the queue.
-  urgency: low
-  compliance_risk: low
-  business_impact: medium
-  tags:
-  - identity
-  - routing
-  - service-desk
-  expected_action: route_it
-  max_reward: 0.92
-  grader: server.task_graders:grade_task_easy
-  partial_credit:
-    resolve: 0.21
-  id: task_easy
-  name: Password Reset Routing
-- task_id: task_medium
-  difficulty: medium
-  title: Payroll Approval Incident
-  prompt: Finance reports that payroll approvals are blocked before a payroll deadline.
-    Choose the best next action.
-  urgency: high
-  compliance_risk: medium
-  business_impact: high
-  tags:
-  - finance
-  - deadline
-  - escalation
-  expected_action: escalate
-  max_reward: 0.97
-  grader: server.task_graders:grade_task_medium
-  partial_credit:
-    route_finance: 0.48
-    resolve: 0.19
-  id: task_medium
-  name: Payroll Approval Incident
-- task_id: task_hard
-  difficulty: hard
-  title: Mailbox Retention Hold
-  prompt: Legal requires a compliant hold response before any mailbox change is made.
-    Choose the best next action.
-  urgency: high
-  compliance_risk: high
-  business_impact: high
-  tags:
-  - legal
-  - retention
-  - compliance
-  expected_action: reply_with_template
-  max_reward: 0.96
-  grader: server.task_graders:grade_task_hard
-  partial_credit:
-    escalate: 0.52
-    resolve: 0.17
-  id: task_hard
-  name: Mailbox Retention Hold
+  - id: task_easy
+    name: "Password Reset Routing"
+    task_id: task_easy
+    title: "Password Reset Routing"
+    difficulty: easy
+    description: "Route password reset requests to IT."
+    prompt: "An internal inbox contains employee password reset requests. Choose the best next action for the queue."
+    urgency: low
+    compliance_risk: low
+    business_impact: medium
+    tags: ["identity", "routing", "service-desk"]
+    expected_action: route_it
+    max_reward: 0.92
+    grader: server.task_graders:grade_task_easy
+  - id: task_medium
+    name: "Payroll Approval Incident"
+    task_id: task_medium
+    title: "Payroll Approval Incident"
+    difficulty: medium
+    description: "Escalate blocked payroll approvals before the deadline."
+    prompt: "Finance reports that payroll approvals are blocked before a payroll deadline. Choose the best next action."
+    urgency: high
+    compliance_risk: medium
+    business_impact: high
+    tags: ["finance", "deadline", "escalation"]
+    expected_action: escalate
+    max_reward: 0.97
+    grader: server.task_graders:grade_task_medium
+  - id: task_hard
+    name: "Mailbox Retention Hold"
+    task_id: task_hard
+    title: "Mailbox Retention Hold"
+    difficulty: hard
+    description: "Respond compliantly to a mailbox retention hold request."
+    prompt: "Legal requires a compliant hold response before any mailbox change is made. Choose the best next action."
+    urgency: high
+    compliance_risk: high
+    business_impact: high
+    tags: ["legal", "retention", "compliance"]
+    expected_action: reply_with_template
+    max_reward: 0.96
+    grader: server.task_graders:grade_task_hard
 grader: server.task_graders:grade_task

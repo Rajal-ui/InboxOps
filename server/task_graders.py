@@ -14,15 +14,15 @@ def _extract_task_id(*args: Any, **kwargs: Any) -> str | None:
         if isinstance(value, str) and value in _TASK_BY_ID:
             return value
         if isinstance(value, dict):
-            task_id = value.get("task_id")
+            task_id = value.get("task_id") or value.get("id")
             if isinstance(task_id, str) and task_id in _TASK_BY_ID:
                 return task_id
-    task_id = kwargs.get("task_id")
+    task_id = kwargs.get("task_id") or kwargs.get("id")
     if isinstance(task_id, str) and task_id in _TASK_BY_ID:
         return task_id
     task = kwargs.get("task")
     if isinstance(task, dict):
-        nested_task_id = task.get("task_id")
+        nested_task_id = task.get("task_id") or task.get("id")
         if isinstance(nested_task_id, str) and nested_task_id in _TASK_BY_ID:
             return nested_task_id
     return None
